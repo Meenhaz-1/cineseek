@@ -1,0 +1,80 @@
+{"_id":"q001","text":"Toy Story","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q002","text":"The Matrix","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q003","text":"Spirited Away","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q004","text":"The Dark Knight","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q005","text":"Inception","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q006","text":"Interstellar","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q007","text":"Mad Max Fury Road","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q008","text":"The Grand Budapest Hotel","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q009","text":"No Country for Old Men","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q010","text":"Eternal Sunshine of the Spotless Mind","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q011","text":"Pan's Labyrinth","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q012","text":"The Princess Bride","metadata":{"category":"exact_title","label_status":"provisional_generated"}}
+{"_id":"q013","text":"Jurasic Park","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q014","text":"Shawshank Redemtion","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q015","text":"Pulp Ficton","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q016","text":"Spritied Away","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q017","text":"Terminator Judgement Day","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q018","text":"Silence of the Lamb","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q019","text":"Groundhog Dey","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q020","text":"Casablanka","metadata":{"category":"misspelling","label_status":"provisional_generated"}}
+{"_id":"q021","text":"animated family adventure","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q022","text":"science fiction thriller","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q023","text":"classic film noir","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q024","text":"romantic comedy","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q025","text":"crime drama","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q026","text":"fantasy adventure","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q027","text":"psychological thriller","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q028","text":"war epic","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q029","text":"musical romance","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q030","text":"quirky indie comedy","metadata":{"category":"genre","label_status":"provisional_generated"}}
+{"_id":"q031","text":"feel-good movie about friendship","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q032","text":"dark and mind-bending","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q033","text":"cozy movie for a rainy night","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q034","text":"tense edge-of-your-seat thriller","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q035","text":"uplifting underdog story","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q036","text":"melancholy and atmospheric romance","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q037","text":"clever twist ending","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q038","text":"surreal dreamlike fantasy","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q039","text":"funny but heartfelt","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q040","text":"stylish neon science fiction","metadata":{"category":"mood","label_status":"provisional_generated"}}
+{"_id":"q041","text":"toys come alive when people leave the room","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q042","text":"prisoner never gives up hope","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q043","text":"hackers discover reality is a simulation","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q044","text":"dream thieves plant an idea","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q045","text":"astronaut travels through a wormhole to save humanity","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q046","text":"girl enters a spirit world to save her parents","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q047","text":"time loop repeats the same winter day","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q048","text":"amnesiac hunts his wife's killer","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q049","text":"theme park dinosaurs escape","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q050","text":"serial killer helps an FBI trainee","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q051","text":"pig wants to become a sheepdog","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q052","text":"small-town police chief investigates strange murders in snow","metadata":{"category":"plot_description","label_status":"provisional_generated"}}
+{"_id":"q053","text":"best movies from the 1940s","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q054","text":"1950s world cinema classics","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q055","text":"gritty 1970s crime films","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q056","text":"iconic 1980s sci-fi","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q057","text":"essential 1990s thrillers","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q058","text":"acclaimed 2000s dramas","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q059","text":"2010s cerebral science fiction","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q060","text":"animation from the 2010s","metadata":{"category":"decade","label_status":"provisional_generated"}}
+{"_id":"q061","text":"sci-fi after 2010 rated above 4","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q062","text":"1990s crime movies with at least 100 ratings","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q063","text":"family animation before 2005","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q064","text":"highly rated Christopher Nolan style movies","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q065","text":"romance musical released after 2015","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q066","text":"horror from the 1970s rated 4 or higher","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q067","text":"shortlist popular adventure movies from 1995","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q068","text":"modern western after 2000","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q069","text":"top-rated classic romance before 1960","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q070","text":"animated fantasy with many ratings","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q071","text":"crime thriller between 1990 and 2000","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q072","text":"space movies released since 2010","metadata":{"category":"filter","label_status":"provisional_generated"}}
+{"_id":"q073","text":"movies like Blade Runner but newer","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q074","text":"something like The Godfather with gangsters","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q075","text":"smart romantic drama about memory","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q076","text":"beautiful Spanish-language dark fantasy","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q077","text":"intense music teacher and ambitious drummer","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q078","text":"colourful stop-motion feeling family movie","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q079","text":"quiet movie about loneliness in Tokyo","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q080","text":"fast post-apocalyptic chase with a woman warrior","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cineseek"
+version = "0.1.0"
+description = "An explainable movie search and relevance evaluation system."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["certifi>=2024"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+cineseek = "cineseek.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

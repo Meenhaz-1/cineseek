@@ -1,0 +1,10 @@
+{
+  "label": "80-query provisional benchmark",
+  "evaluatedQueries": 80,
+  "candidateRecall": 0.80625,
+  "mrr": 0.3150748888907251,
+  "ndcgAt10": 0.31871043116164344,
+  "p95LatencyMs": 101.028,
+  "missingQueries": 0,
+  "methodology": "Warm local runs over MovieLens Latest Small with provisional relevance judgments."
+}

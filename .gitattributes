@@ -1,0 +1,14 @@
+* text=auto eol=lf
+*.py text diff=python
+*.ts text
+*.tsx text
+*.mjs text
+*.mts text
+*.css text
+*.json text
+*.jsonl text
+*.md text
+*.tsv text
+*.png binary
+*.gif binary
+*.xlsx binary
