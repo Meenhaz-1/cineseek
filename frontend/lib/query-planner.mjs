@@ -16,7 +16,7 @@ import {
 import { suggestPersonName } from "./person-name-suggestion.mjs";
 
 export const QUERY_PLANNER_ID = "deterministic";
-export const QUERY_PLANNER_VERSION = "1.2.0";
+export const QUERY_PLANNER_VERSION = "1.3.0";
 export const SEMANTIC_SYNONYMS = {
   dark: ["gritty", "crime", "thriller"],
   space: ["sci-fi", "black hole"],
@@ -737,10 +737,21 @@ export function planQuery(rawQuery, indexes) {
       : hasMetadata && residualTitleTerms.length === 0
         ? ""
         : effectiveQuery);
+  const isPureGenreDiscovery = Boolean(
+    metadata.genres.length > 0 &&
+    (metadata.genres.length === 1 || metadata.isCompoundGenre) &&
+    metadata.yearMin === undefined &&
+    metadata.yearMax === undefined &&
+    metadata.ratingMin === undefined &&
+    metadata.ratingCountMin === undefined &&
+    residualTitleTerms.length === 0 &&
+    !metadata.explicitTitleText &&
+    people.length === 0,
+  );
   const fieldQuery =
     people.length && ownsPersonRouting
       ? people.map(({ name }) => normalize(name)).join(" ")
-      : metadata.isCompoundGenre && !titleQuery
+      : isPureGenreDiscovery
         ? ""
         : effectiveQuery;
   const genreTitleFallbackQuery = [
@@ -872,7 +883,7 @@ export function planQuery(rawQuery, indexes) {
       semanticExpansions: concepts
         .filter((term) => SEMANTIC_SYNONYMS[term])
         .map((term) => ({ term, values: SEMANTIC_SYNONYMS[term] })),
-      structuredGenreRanking: metadata.isCompoundGenre,
+      structuredGenreRanking: isPureGenreDiscovery,
     },
     entities: { people, genres: metadata.genres },
     filters,

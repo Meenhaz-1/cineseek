@@ -241,25 +241,30 @@ test("keeps genre-owned words out of title scoring while preserving exact and ti
     },
     {
       _id: "12",
-      title: "Comedy Night",
+      title: "Tiny Laughs",
       metadata: {
         year: 2021,
-        genres: ["Drama"],
+        genres: ["Comedy"],
         average_rating: 5,
         rating_count: 1,
       },
     },
   ]);
-  const result = runTitleSearch(pipeline, {
-    normalizedQuery: "comedy",
-    retrievalQuery: "",
-    genreTitleFallbackQuery: "comedy",
+  const plan = {
+    effectiveQuery: "comedy",
+    routes: {
+      titleQuery: "",
+      fieldQuery: "",
+      genreTitleFallbackQuery: "comedy",
+      structuredGenreRanking: true,
+    },
     filters: { genres: ["Comedy"] },
-  });
+  };
+  const result = runTitleSearch(pipeline, plan);
 
   assert.deepEqual(
     result.evaluation.rankedResults.map(({ id }) => id),
-    ["10", "11", "12"],
+    ["11", "12"],
   );
   const genreCandidate = result.combinedScoring.candidatesPreview.find(
     ({ id }) => id === "11",
@@ -267,8 +272,58 @@ test("keeps genre-owned words out of title scoring while preserving exact and ti
   assert.equal(genreCandidate.titleScore, 0);
   assert.equal(genreCandidate.metadataGenreMatchCount, 1);
   assert.equal(
-    result.combinedScoring.candidatesPreview[0].isExactTitleMatch,
+    result.combinedScoring.rankingContext.structuredGenreDiscovery,
     true,
+  );
+  assert.ok(
+    result.combinedScoring.candidatesPreview[0].structuredGenreScore >
+      result.combinedScoring.candidatesPreview[1].structuredGenreScore,
+  );
+  assert.equal(result.combinedScoring.candidatesPreview.at(-1).id, "12");
+});
+
+test("custom genre weights flow through the production retrieval boundary", () => {
+  const pipeline = buildTitleSearchPipeline([
+    {
+      _id: "30",
+      title: "Quality Comedy",
+      metadata: {
+        genres: ["Comedy"],
+        average_rating: 4.5,
+        rating_count: 50,
+      },
+    },
+    {
+      _id: "31",
+      title: "Popular Comedy",
+      metadata: {
+        genres: ["Comedy"],
+        average_rating: 3.7,
+        rating_count: 1000,
+      },
+    },
+  ]);
+  const plan = {
+    effectiveQuery: "comedy",
+    routes: {
+      titleQuery: "",
+      fieldQuery: "",
+      genreTitleFallbackQuery: "comedy",
+      structuredGenreRanking: true,
+    },
+    filters: { genres: ["Comedy"] },
+  };
+  const result = runTitleSearch(pipeline, plan, {
+    genreWeights: {
+      genreFocus: 0,
+      bayesianRating: 0,
+      ratingEvidence: 100,
+    },
+  });
+  assert.equal(result.evaluation.rankedResults[0].id, "31");
+  assert.equal(
+    result.combinedScoring.rankingContext.structuredGenreWeights.ratingEvidence,
+    1,
   );
 });
 

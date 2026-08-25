@@ -24,10 +24,36 @@ export const DEFAULT_COMBINED_WEIGHTS = {
   editSimilarity: 15,
 };
 
-export function validateCombinedWeights(input) {
+export const GENRE_WEIGHT_KEYS = [
+  "genreFocus",
+  "bayesianRating",
+  "ratingEvidence",
+];
+
+export const SINGLE_GENRE_DISCOVERY_WEIGHTS = {
+  genreFocus: 15,
+  bayesianRating: 55,
+  ratingEvidence: 30,
+};
+
+export const COMPOUND_GENRE_DISCOVERY_WEIGHTS = {
+  genreFocus: 55,
+  bayesianRating: 30,
+  ratingEvidence: 15,
+};
+
+export const BAYESIAN_RATING_PRIOR = 20;
+
+function validateRelativeWeights(input, defaults, keys, label) {
+  if (
+    input !== undefined &&
+    (typeof input !== "object" || input === null || Array.isArray(input))
+  ) {
+    throw new Error(`${label} must be an object.`);
+  }
   const weights = {};
-  for (const key of COMBINED_WEIGHT_KEYS) {
-    const value = input?.[key] ?? DEFAULT_COMBINED_WEIGHTS[key];
+  for (const key of keys) {
+    const value = input?.[key] ?? defaults[key];
     if (
       typeof value !== "number" ||
       !Number.isFinite(value) ||
@@ -38,21 +64,31 @@ export function validateCombinedWeights(input) {
     }
     weights[key] = value;
   }
-  const totalWeight = COMBINED_WEIGHT_KEYS.reduce(
-    (sum, key) => sum + weights[key],
-    0,
-  );
+  const totalWeight = keys.reduce((sum, key) => sum + weights[key], 0);
   if (totalWeight <= 0)
-    throw new Error(
-      "At least one combined-ranker weight must be greater than zero.",
-    );
+    throw new Error(`At least one ${label} weight must be greater than zero.`);
   const effectiveWeights = Object.fromEntries(
-    COMBINED_WEIGHT_KEYS.map((key) => [
-      key,
-      Number((weights[key] / totalWeight).toFixed(6)),
-    ]),
+    keys.map((key) => [key, Number((weights[key] / totalWeight).toFixed(6))]),
   );
   return { weights, effectiveWeights, totalWeight };
+}
+
+export function validateCombinedWeights(input) {
+  return validateRelativeWeights(
+    input,
+    DEFAULT_COMBINED_WEIGHTS,
+    COMBINED_WEIGHT_KEYS,
+    "combined-ranker",
+  );
+}
+
+export function validateGenreWeights(input, defaults) {
+  return validateRelativeWeights(
+    input,
+    defaults ?? SINGLE_GENRE_DISCOVERY_WEIGHTS,
+    GENRE_WEIGHT_KEYS,
+    "genre-ranker",
+  );
 }
 
 export function scoreCombinedTitleCandidate(
@@ -114,6 +150,17 @@ export function scoreCombinedTitleCandidates(
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
     requestedGenres.length > 0;
+  const structuredGenreProfile =
+    requestedGenres.length === 1
+      ? "single_genre_balanced"
+      : "compound_genre_focus";
+  const structuredGenreDefaults =
+    requestedGenres.length === 1
+      ? SINGLE_GENRE_DISCOVERY_WEIGHTS
+      : COMPOUND_GENRE_DISCOVERY_WEIGHTS;
+  const genreWeightProfile = isStructuredGenreDiscovery
+    ? validateGenreWeights(rankingContext.genreWeights, structuredGenreDefaults)
+    : null;
   const cachedRatingStats = rankingContext.ratingStats;
   let ratingVotes = cachedRatingStats?.ratingVotes ?? 0;
   let weightedRatingSum = 0;
@@ -186,18 +233,36 @@ export function scoreCombinedTitleCandidates(
       const bayesianRating = cachedRating
         ? cachedRating.bayesianRating
         : ratingVotes > 0
-          ? (ratingCount * averageRating + 20 * corpusRatingMean) /
-            (ratingCount + 20)
+          ? (ratingCount * averageRating +
+              BAYESIAN_RATING_PRIOR * corpusRatingMean) /
+            (ratingCount + BAYESIAN_RATING_PRIOR)
           : 0;
       const ratingEvidence = cachedRating
         ? cachedRating.ratingEvidence
         : Math.log1p(ratingCount) / Math.log1p(maxRatingCount);
+      const structuredGenreSignals = {
+        genreFocus,
+        bayesianRating: bayesianRating / 5,
+        ratingEvidence,
+      };
+      const structuredGenreContributions = Object.fromEntries(
+        GENRE_WEIGHT_KEYS.map((key) => [
+          key,
+          isStructuredGenreDiscovery
+            ? Number(
+                (
+                  structuredGenreSignals[key] *
+                  genreWeightProfile.effectiveWeights[key]
+                ).toFixed(6),
+              )
+            : 0,
+        ]),
+      );
       const structuredGenreScore = isStructuredGenreDiscovery
         ? Number(
-            (
-              genreFocus * 0.55 +
-              (bayesianRating / 5) * 0.3 +
-              ratingEvidence * 0.15
+            GENRE_WEIGHT_KEYS.reduce(
+              (sum, key) => sum + structuredGenreContributions[key],
+              0,
             ).toFixed(6),
           )
         : 0;
@@ -214,6 +279,8 @@ export function scoreCombinedTitleCandidates(
         genreFocus,
         bayesianRating: Number(bayesianRating.toFixed(3)),
         ratingEvidence: Number(ratingEvidence.toFixed(6)),
+        structuredGenreSignals,
+        structuredGenreContributions,
         structuredGenreScore,
         isExactTitleMatch,
       };
@@ -246,18 +313,38 @@ export function scoreCombinedTitleCandidates(
       );
     });
   return {
-    method: blendFieldEvidence
-      ? "weighted_explainable_multifield_ranker"
-      : "weighted_explainable_title_ranker",
+    method: isStructuredGenreDiscovery
+      ? "weighted_structured_genre_ranker"
+      : blendFieldEvidence
+        ? "weighted_explainable_multifield_ranker"
+        : "weighted_explainable_title_ranker",
     rankingContext: {
       requestedGenres,
       genreOverlapPrecedesTitleScore: requestedGenres.length > 1,
-      titleWeight: blendFieldEvidence ? 0.35 : 1,
-      fieldWeight: blendFieldEvidence ? 0.65 : 0,
+      titleWeight: isStructuredGenreDiscovery
+        ? 0
+        : blendFieldEvidence
+          ? 0.35
+          : 1,
+      fieldWeight: isStructuredGenreDiscovery
+        ? 0
+        : blendFieldEvidence
+          ? 0.65
+          : 0,
       structuredGenreDiscovery: isStructuredGenreDiscovery,
-      structuredGenreWeights: isStructuredGenreDiscovery
-        ? { genreFocus: 0.55, bayesianRating: 0.3, ratingEvidence: 0.15 }
+      structuredGenreProfile: isStructuredGenreDiscovery
+        ? structuredGenreProfile
         : null,
+      structuredGenreInputWeights: isStructuredGenreDiscovery
+        ? genreWeightProfile.weights
+        : null,
+      structuredGenreWeights: isStructuredGenreDiscovery
+        ? genreWeightProfile.effectiveWeights
+        : null,
+      structuredGenreWeightTotal: isStructuredGenreDiscovery
+        ? genreWeightProfile.totalWeight
+        : null,
+      bayesianPrior: BAYESIAN_RATING_PRIOR,
     },
     weights,
     effectiveWeights,

@@ -148,4 +148,33 @@ test("plans romantic comedy as structured intersection without text scoring", ()
   assert.equal(plan.filters.genreMode, "all");
   assert.equal(plan.routes.titleQuery, "");
   assert.equal(plan.routes.fieldQuery, "");
+  assert.equal(plan.routes.structuredGenreRanking, true);
+});
+
+test("plans a bare genre as structured discovery without title or field scoring", () => {
+  const plan = planQuery("comedy", indexes);
+  assert.deepEqual(plan.filters.genres, ["Comedy"]);
+  assert.equal(plan.routes.titleQuery, "");
+  assert.equal(plan.routes.fieldQuery, "");
+  assert.equal(plan.routes.structuredGenreRanking, true);
+});
+
+test("keeps unconnected multi-genre discovery on the existing field route", () => {
+  const plan = planQuery("science fiction thriller", indexes);
+  assert.deepEqual(plan.filters.genres, ["Sci-Fi", "Thriller"]);
+  assert.equal(plan.routes.titleQuery, "");
+  assert.equal(plan.routes.fieldQuery, "science fiction thriller");
+  assert.equal(plan.routes.structuredGenreRanking, false);
+});
+
+test("keeps filtered single-genre queries on their existing ranking path", () => {
+  const plan = planQuery(
+    "1990s crime movies with at least 100 ratings",
+    indexes,
+  );
+  assert.equal(plan.routes.structuredGenreRanking, false);
+  assert.equal(
+    plan.routes.fieldQuery,
+    "1990s crime movies with at least 100 ratings",
+  );
 });

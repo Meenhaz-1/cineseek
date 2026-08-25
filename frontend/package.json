@@ -24,6 +24,7 @@
     "benchmark:compare": "node scripts/compare-title-benchmarks.mjs",
     "benchmark:summary": "node scripts/build-benchmark-summary.mjs",
     "benchmark:judgment-pool": "node scripts/build-metadata-judgment-pool.mjs",
+    "benchmark:generic-genre": "node scripts/build-generic-genre-evidence.mjs",
     "enrich:tmdb": "node --env-file=.env.local scripts/enrich-tmdb.mjs",
     "enrich:tmdb:corpus": "node --env-file=.env.local scripts/enrich-tmdb.mjs --scope corpus",
     "build:enriched-corpus": "node scripts/build-enriched-corpus.mjs",

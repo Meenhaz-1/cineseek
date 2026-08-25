@@ -155,6 +155,7 @@ Run these from `frontend/` unless noted otherwise.
 | `npm run test:tmdb` | Run enrichment and poster-path tests using source-owned fixtures |
 | `npm run workbook:parser-cases:verify` | Verify parser workbook cases against the production planner |
 | `npm run benchmark:title` | Run the 80-query production pipeline benchmark |
+| `npm run benchmark:generic-genre` | Build the focused, unjudged `comedy` ranking pool and evidence report |
 | `npm run benchmark:summary` | Regenerate the UI benchmark summary from an evaluator report |
 | `npm run lint` | Run ESLint |
 | `npm run format:check` | Verify Prettier formatting |

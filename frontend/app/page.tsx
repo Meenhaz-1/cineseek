@@ -16,6 +16,8 @@ type CombinedWeightKey =
   | "dice"
   | "editSimilarity";
 type CombinedWeights = Record<CombinedWeightKey, number>;
+type GenreWeightKey = "genreFocus" | "bayesianRating" | "ratingEvidence";
+type GenreWeights = Record<GenreWeightKey, number>;
 const DEFAULT_RANKER_WEIGHTS: CombinedWeights = {
   tokenCoverage: 25,
   orderedCoverage: 20,
@@ -69,6 +71,27 @@ const WEIGHT_CONTROLS: {
     key: "editSimilarity",
     label: "Edit similarity",
     hint: "Whole-string character closeness",
+  },
+];
+const GENRE_WEIGHT_CONTROLS: {
+  key: GenreWeightKey;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    key: "genreFocus",
+    label: "Genre centrality",
+    hint: "How concentrated the movie is in the requested genre",
+  },
+  {
+    key: "bayesianRating",
+    label: "Rating quality",
+    hint: "MovieLens rating adjusted toward the corpus average",
+  },
+  {
+    key: "ratingEvidence",
+    label: "Rating-count evidence",
+    hint: "Log-scaled MovieLens rating count as a popularity proxy",
   },
 ];
 type CoachState = {
@@ -343,7 +366,8 @@ type TitleRetrieval = {
         skipped: false;
         method:
           | "weighted_explainable_title_ranker"
-          | "weighted_explainable_multifield_ranker";
+          | "weighted_explainable_multifield_ranker"
+          | "weighted_structured_genre_ranker";
         weights: CombinedWeights;
         effectiveWeights: CombinedWeights;
         totalWeight: number;
@@ -353,11 +377,16 @@ type TitleRetrieval = {
           titleWeight: number;
           fieldWeight: number;
           structuredGenreDiscovery: boolean;
+          structuredGenreProfile:
+            "single_genre_balanced" | "compound_genre_focus" | null;
+          structuredGenreInputWeights: GenreWeights | null;
           structuredGenreWeights: {
             genreFocus: number;
             bayesianRating: number;
             ratingEvidence: number;
           } | null;
+          structuredGenreWeightTotal: number | null;
+          bayesianPrior: number;
         };
         candidateCount: number;
         candidatesPreview: {
@@ -374,6 +403,8 @@ type TitleRetrieval = {
           genreFocus: number;
           bayesianRating: number;
           ratingEvidence: number;
+          structuredGenreSignals: GenreWeights;
+          structuredGenreContributions: GenreWeights;
           structuredGenreScore: number;
         }[];
         truncated: boolean;
@@ -676,6 +707,8 @@ export default function Home() {
   const [rankerWeights, setRankerWeights] = useState<CombinedWeights>(
     DEFAULT_RANKER_WEIGHTS,
   );
+  const [genreWeightOverrides, setGenreWeightOverrides] =
+    useState<GenreWeights | null>(null);
   const [combinedUpdating, setCombinedUpdating] = useState(false);
   const [resultLimit, setResultLimit] = useState(RESULT_PAGE_SIZE);
   const [showStickySearch, setShowStickySearch] = useState(false);
@@ -693,6 +726,19 @@ export default function Home() {
     (sum, weight) => sum + weight,
     0,
   );
+  const responseCombinedScoring =
+    titleRetrieval.status === "ready"
+      ? titleRetrieval.result?.combinedScoring
+      : undefined;
+  const responseGenreWeights: GenreWeights | null =
+    responseCombinedScoring && !responseCombinedScoring.skipped
+      ? responseCombinedScoring.rankingContext.structuredGenreInputWeights
+      : null;
+  const activeGenreWeights: GenreWeights | null =
+    genreWeightOverrides ?? responseGenreWeights;
+  const genreWeightTotal = activeGenreWeights
+    ? Object.values(activeGenreWeights).reduce((sum, weight) => sum + weight, 0)
+    : 0;
   const titleRetrievalLoading =
     titleRetrieval.status === "idle" || titleRetrieval.query !== query;
   const fullResults = useMemo(
@@ -770,6 +816,7 @@ export default function Home() {
       body: JSON.stringify({
         query,
         weights: rankerWeights,
+        genreWeights: genreWeightOverrides ?? undefined,
         resultLimit,
       }),
       signal: controller.signal,
@@ -801,7 +848,7 @@ export default function Home() {
         setCombinedUpdating(false);
       });
     return () => controller.abort();
-  }, [query, rankerWeights, resultLimit]);
+  }, [query, rankerWeights, genreWeightOverrides, resultLimit]);
   function updateRankerWeight(key: CombinedWeightKey, value: number) {
     setCombinedUpdating(true);
     setRankerWeights((current) => {
@@ -813,9 +860,21 @@ export default function Home() {
     setCombinedUpdating(true);
     setRankerWeights(DEFAULT_RANKER_WEIGHTS);
   }
+  function updateGenreWeight(key: GenreWeightKey, value: number) {
+    if (!activeGenreWeights) return;
+    const next = { ...activeGenreWeights, [key]: value };
+    if (!Object.values(next).some((weight) => weight > 0)) return;
+    setCombinedUpdating(true);
+    setGenreWeightOverrides(next);
+  }
+  function resetGenreWeights() {
+    setCombinedUpdating(true);
+    setGenreWeightOverrides(null);
+  }
   function chooseQuery(nextQuery: string) {
     setCoach({ status: "loading" });
     setResultLimit(RESULT_PAGE_SIZE);
+    setGenreWeightOverrides(null);
     if (nextQuery === query) setCoachRequest((value) => value + 1);
     else setQuery(nextQuery);
   }
@@ -3008,25 +3067,36 @@ export default function Home() {
                               Build the final multi-field score
                             </h3>
                             <p>
-                              The six adjustable signals form the title score.
-                              It contributes 35% of the final score; typed-field
-                              evidence contributes 65% so exact people and
-                              directors outrank incidental description text.
+                              {titleRetrieval.result.combinedScoring
+                                .rankingContext.structuredGenreDiscovery
+                                ? "This genre-only query uses adjustable centrality, rating quality, and rating-count evidence instead of title similarity."
+                                : "The six adjustable signals form the title score. It contributes 35% of the final score; typed-field evidence contributes 65% so exact people and directors outrank incidental description text."}
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={resetRankerWeights}
-                            disabled={Object.entries(
-                              DEFAULT_RANKER_WEIGHTS,
-                            ).every(
-                              ([key, value]) =>
-                                rankerWeights[key as CombinedWeightKey] ===
-                                value,
-                            )}
-                          >
-                            Reset weights
-                          </button>
+                          {titleRetrieval.result.combinedScoring.rankingContext
+                            .structuredGenreDiscovery ? (
+                            <button
+                              type="button"
+                              onClick={resetGenreWeights}
+                              disabled={genreWeightOverrides === null}
+                            >
+                              Reset genre weights
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={resetRankerWeights}
+                              disabled={Object.entries(
+                                DEFAULT_RANKER_WEIGHTS,
+                              ).every(
+                                ([key, value]) =>
+                                  rankerWeights[key as CombinedWeightKey] ===
+                                  value,
+                              )}
+                            >
+                              Reset weights
+                            </button>
+                          )}
                         </div>
                         {titleRetrieval.result.combinedScoring.rankingContext
                           .structuredGenreDiscovery && (
@@ -3034,12 +3104,88 @@ export default function Home() {
                             <b>Structured genre ranking is active</b>
                             <p>
                               Because the query contains only genre constraints,
-                              title weights are not used. Results combine 55%
-                              genre focus, 30% Bayesian rating quality, and 15%
-                              rating-count evidence.
+                              title weights are not used. This{" "}
+                              {titleRetrieval.result.combinedScoring
+                                .rankingContext.structuredGenreProfile ===
+                              "single_genre_balanced"
+                                ? "balanced single-genre profile favors well-supported, recognizable choices"
+                                : "compound-genre profile emphasizes central fit across every requested genre"}
+                              .
+                            </p>
+                            <p>
+                              Rating count is a log-scaled MovieLens popularity
+                              proxy, not global awareness. The card match value
+                              is a weighted ranking score, not a probability.
                             </p>
                           </div>
                         )}
+                        {titleRetrieval.result.combinedScoring.rankingContext
+                          .structuredGenreDiscovery &&
+                          activeGenreWeights && (
+                            <>
+                              <div
+                                className="weightControlGrid genreWeightControlGrid"
+                                role="group"
+                                aria-label="Genre ranking weights"
+                              >
+                                {GENRE_WEIGHT_CONTROLS.map(
+                                  ({ key, label, hint }) => (
+                                    <label key={key}>
+                                      <span>
+                                        <b>{label}</b>
+                                        <small>{hint}</small>
+                                      </span>
+                                      <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        value={activeGenreWeights[key]}
+                                        aria-describedby={`genre-weight-${key}-value`}
+                                        onChange={(event) =>
+                                          updateGenreWeight(
+                                            key,
+                                            Number(event.target.value),
+                                          )
+                                        }
+                                      />
+                                      <output id={`genre-weight-${key}-value`}>
+                                        <b>{activeGenreWeights[key]}</b>
+                                        <small>
+                                          {Math.round(
+                                            (activeGenreWeights[key] /
+                                              genreWeightTotal) *
+                                              100,
+                                          )}
+                                          % effective
+                                        </small>
+                                      </output>
+                                    </label>
+                                  ),
+                                )}
+                              </div>
+                              <div className="weightTotal">
+                                <span>Relative-weight total</span>
+                                <strong>{genreWeightTotal}</strong>
+                                <p>
+                                  Bayesian ratings use a{" "}
+                                  {
+                                    titleRetrieval.result.combinedScoring
+                                      .rankingContext.bayesianPrior
+                                  }
+                                  -rating prior. Scores are normalized so the
+                                  effective weights always total 100%.
+                                </p>
+                                <i role="status" aria-live="polite">
+                                  {combinedUpdating
+                                    ? "Recalculating genre results…"
+                                    : genreWeightOverrides
+                                      ? "Custom genre weights applied."
+                                      : "Active profile defaults applied."}
+                                </i>
+                              </div>
+                            </>
+                          )}
                         <div
                           className="weightControlGrid"
                           hidden={
@@ -3139,14 +3285,20 @@ export default function Home() {
                                           {Math.round(
                                             candidate.genreFocus * 100,
                                           )}
-                                          %
+                                          % · +
+                                          {candidate.structuredGenreContributions.genreFocus.toFixed(
+                                            3,
+                                          )}
                                         </b>
                                       </span>
                                       <span>
                                         <i>Bayesian rating</i>
                                         <b>
                                           {candidate.bayesianRating.toFixed(2)}
-                                          /5
+                                          /5 · +
+                                          {candidate.structuredGenreContributions.bayesianRating.toFixed(
+                                            3,
+                                          )}
                                         </b>
                                       </span>
                                       <span>
@@ -3155,7 +3307,10 @@ export default function Home() {
                                           {Math.round(
                                             candidate.ratingEvidence * 100,
                                           )}
-                                          %
+                                          % · +
+                                          {candidate.structuredGenreContributions.ratingEvidence.toFixed(
+                                            3,
+                                          )}
                                         </b>
                                       </span>
                                     </div>

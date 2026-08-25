@@ -19,7 +19,10 @@ import {
 import { scoreEditDistanceCandidates } from "./edit-distance.mjs";
 import { scoreTokenCoverageCandidates } from "./token-coverage.mjs";
 import { scoreOrderedTokenProximityCandidates } from "./ordered-token-proximity.mjs";
-import { scoreCombinedTitleCandidates } from "./combined-title-ranker.mjs";
+import {
+  BAYESIAN_RATING_PRIOR,
+  scoreCombinedTitleCandidates,
+} from "./combined-title-ranker.mjs";
 
 const roundedMs = (startedAt) =>
   Number((performance.now() - startedAt).toFixed(3));
@@ -48,8 +51,9 @@ export function buildTitleSearchPipeline(documents) {
     ratingById.set(record.id, {
       bayesianRating:
         ratingVotes > 0
-          ? (ratingCount * averageRating + 20 * corpusRatingMean) /
-            (ratingCount + 20)
+          ? (ratingCount * averageRating +
+              BAYESIAN_RATING_PRIOR * corpusRatingMean) /
+            (ratingCount + BAYESIAN_RATING_PRIOR)
           : 0,
       ratingEvidence: Math.log1p(ratingCount) / Math.log1p(maxRatingCount),
     });
@@ -217,8 +221,12 @@ export function runTitleSearch(pipeline, input, options = {}) {
       : retrievalQuery || normalizedQuery
   ).trim();
   const hasFieldQuery = fieldQuery.length > 0;
+  const isStructuredGenreDiscovery =
+    queryPlan?.routes.structuredGenreRanking === true;
   const hasGenreTitleFallback =
-    filters.genres.length > 0 && genreTitleFallbackQuery.length > 0;
+    !isStructuredGenreDiscovery &&
+    filters.genres.length > 0 &&
+    genreTitleFallbackQuery.length > 0;
 
   const metadataStartedAt = performance.now();
   const metadataCandidateIds = hasMetadataFilters
@@ -305,7 +313,15 @@ export function runTitleSearch(pipeline, input, options = {}) {
           previewLimit,
         )
       : { candidateIds: [] };
-    const exactTitleIds = new Set(matches.map(({ id }) => id));
+    const exactTitleIds = new Set(
+      matches
+        .filter(({ id }) => {
+          if (!isStructuredGenreDiscovery) return true;
+          const record = pipeline.tokens.records.get(id);
+          return record && recordMatchesFilters(record, filters);
+        })
+        .map(({ id }) => id),
+    );
     const genreFallbackCandidateIds = new Set(
       [
         ...new Set([...genreFallbackResult.candidateIds, ...exactTitleIds]),
@@ -397,6 +413,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
         genreFallbackQuery: genreTitleFallbackQuery,
         structuredGenreRanking:
           queryPlan?.routes.structuredGenreRanking === true,
+        genreWeights: options.genreWeights,
         ratingStats: pipeline.ratingStats,
       },
     );

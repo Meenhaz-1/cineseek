@@ -5,7 +5,10 @@ import type {
 import type { TitleTokenIndex } from "./title-token-index.mjs";
 import type { CharacterTrigramIndex } from "./character-trigram-index.mjs";
 import type { FieldAwareIndex, FieldMatch } from "./field-aware-index.mjs";
-import type { CombinedWeights } from "./combined-title-ranker.mjs";
+import type {
+  CombinedWeights,
+  GenreWeights,
+} from "./combined-title-ranker.mjs";
 import type { MetadataFilters } from "./metadata-query.mjs";
 import type { QueryPlan } from "./query-planner.mjs";
 
@@ -69,6 +72,7 @@ export function runTitleSearch(
     rankLimit?: number;
     cacheStatus?: string;
     weights?: Partial<CombinedWeights>;
+    genreWeights?: Partial<GenreWeights>;
   },
 ): TitleSearchPipelineResult;
 export function publicTitleSearchResult(

@@ -7,13 +7,20 @@ import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
 import { loadRuntimeManifest } from "../../../lib/runtime-data.mjs";
 import {
   validateCombinedWeights,
+  validateGenreWeights,
   type CombinedWeights,
+  type GenreWeights,
 } from "../../../lib/combined-title-ranker.mjs";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  let body: { query?: unknown; weights?: unknown; resultLimit?: unknown };
+  let body: {
+    query?: unknown;
+    weights?: unknown;
+    genreWeights?: unknown;
+    resultLimit?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -53,6 +60,18 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    const genreWeights = body.genreWeights as Partial<GenreWeights> | undefined;
+    try {
+      validateGenreWeights(genreWeights);
+    } catch (error) {
+      return Response.json(
+        {
+          error:
+            error instanceof Error ? error.message : "Invalid genre weights",
+        },
+        { status: 400 },
+      );
+    }
     const resultLimit =
       body.resultLimit === undefined ? 24 : Number(body.resultLimit);
     if (
@@ -73,6 +92,7 @@ export async function POST(request: Request) {
       cacheStatus: runtimeState.cached ? "warm" : "built for this request",
       rankLimit: resultLimit,
       weights,
+      genreWeights,
     });
     const items = result.evaluation.rankedResults.map((ranked) => ({
       ...runtimeState.searchIndexes.tokens.records.get(ranked.id),
