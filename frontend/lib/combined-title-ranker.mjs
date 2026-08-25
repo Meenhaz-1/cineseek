@@ -114,21 +114,22 @@ export function scoreCombinedTitleCandidates(
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
     requestedGenres.length > 0;
-  const corpusRecords = isStructuredGenreDiscovery ? [...records.values()] : [];
-  const ratingVotes = isStructuredGenreDiscovery
-    ? corpusRecords.reduce((sum, record) => sum + (record.ratingCount ?? 0), 0)
-    : 0;
+  let ratingVotes = 0;
+  let weightedRatingSum = 0;
+  let maxRatingCount = 1;
+  if (isStructuredGenreDiscovery) {
+    for (const record of records.values()) {
+      const ratingCount = record.ratingCount ?? 0;
+      ratingVotes += ratingCount;
+      weightedRatingSum += (record.averageRating ?? 0) * ratingCount;
+      maxRatingCount = Math.max(maxRatingCount, ratingCount);
+    }
+  }
   const corpusRatingMean =
-    ratingVotes > 0
-      ? corpusRecords.reduce(
-          (sum, record) =>
-            sum + (record.averageRating ?? 0) * (record.ratingCount ?? 0),
-          0,
-        ) / ratingVotes
-      : 0;
-  const maxRatingCount = isStructuredGenreDiscovery
-    ? Math.max(1, ...corpusRecords.map((record) => record.ratingCount ?? 0))
-    : 1;
+    ratingVotes > 0 ? weightedRatingSum / ratingVotes : 0;
+  const zeroSignals = Object.fromEntries(
+    COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
+  );
   const candidates = candidateIds
     .map((id) => records.get(id))
     .filter(Boolean)
@@ -145,13 +146,14 @@ export function scoreCombinedTitleCandidates(
           : normalizedQuery;
       const titleCandidate = isStructuredGenreDiscovery
         ? {
-            ...record,
-            signals: Object.fromEntries(
-              COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
-            ),
-            contributions: Object.fromEntries(
-              COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
-            ),
+            id: record.id,
+            title: record.title,
+            year: record.year,
+            genres: record.genres,
+            averageRating: record.averageRating,
+            ratingCount: record.ratingCount,
+            signals: zeroSignals,
+            contributions: zeroSignals,
             combinedScore: 0,
           }
         : scoreCombinedTitleCandidate(

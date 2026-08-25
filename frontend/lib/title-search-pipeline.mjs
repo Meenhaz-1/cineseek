@@ -42,10 +42,56 @@ export async function loadTitleSearchPipeline(corpusPath) {
   return buildTitleSearchPipeline(documents);
 }
 
+function compactDiagnosticCandidate(candidate) {
+  if (!candidate || typeof candidate !== "object") return candidate;
+  const {
+    cast: _cast,
+    directors: _directors,
+    overview: _overview,
+    tags: _tags,
+    posterPath: _posterPath,
+    imdbId: _imdbId,
+    tmdbId: _tmdbId,
+    ...diagnosticCandidate
+  } = candidate;
+  void _cast;
+  void _directors;
+  void _overview;
+  void _tags;
+  void _posterPath;
+  void _imdbId;
+  void _tmdbId;
+  return diagnosticCandidate;
+}
+
+function compactDiagnosticStage(stage) {
+  if (!stage || !Array.isArray(stage.candidatesPreview)) return stage;
+  return {
+    ...stage,
+    candidatesPreview: stage.candidatesPreview.map(compactDiagnosticCandidate),
+  };
+}
+
 export function publicTitleSearchResult(result) {
   const { evaluation: _evaluation, ...publicResult } = result;
   void _evaluation;
-  return publicResult;
+  return {
+    ...publicResult,
+    metadataFilter: compactDiagnosticStage(publicResult.metadataFilter),
+    tokenLookup: compactDiagnosticStage(publicResult.tokenLookup),
+    fieldLookup: compactDiagnosticStage(publicResult.fieldLookup),
+    trigramLookup: compactDiagnosticStage(publicResult.trigramLookup),
+    combinedCandidates: compactDiagnosticStage(publicResult.combinedCandidates),
+    fuzzyScoring: compactDiagnosticStage(publicResult.fuzzyScoring),
+    editScoring: compactDiagnosticStage(publicResult.editScoring),
+    tokenCoverageScoring: compactDiagnosticStage(
+      publicResult.tokenCoverageScoring,
+    ),
+    orderedTokenProximityScoring: compactDiagnosticStage(
+      publicResult.orderedTokenProximityScoring,
+    ),
+    combinedScoring: compactDiagnosticStage(publicResult.combinedScoring),
+  };
 }
 
 function normalizeFilters(input = {}) {

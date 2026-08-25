@@ -63,6 +63,28 @@ const documents = [
   },
 ];
 
+test("public diagnostics omit heavyweight enriched fields", () => {
+  const pipeline = buildTitleSearchPipeline(documents);
+  const result = runTitleSearch(pipeline, {
+    effectiveQuery: "animation",
+    filters: { genres: ["Animation"] },
+    routes: {
+      titleQuery: "",
+      fieldQuery: "",
+      genreTitleFallbackQuery: "animation",
+      structuredGenreRanking: true,
+    },
+  });
+  const publicResult = publicTitleSearchResult(result);
+  const candidate = publicResult.metadataFilter.candidatesPreview[0];
+
+  assert.equal(candidate.title, "Toy Story");
+  assert.equal("overview" in candidate, false);
+  assert.equal("cast" in candidate, false);
+  assert.equal("directors" in candidate, false);
+  assert.equal("tags" in candidate, false);
+});
+
 test("exact cast entities retrieve and outrank incidental title matches", () => {
   const pipeline = buildTitleSearchPipeline([
     ...documents,
