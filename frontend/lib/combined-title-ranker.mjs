@@ -143,12 +143,23 @@ export function scoreCombinedTitleCandidates(
         (metadataGenreMatchCount === 0 || usesStrongGenreTitlePhrase)
           ? genreFallbackQuery
           : normalizedQuery;
-      const titleCandidate = scoreCombinedTitleCandidate(
-        record,
-        candidateTitleQuery,
-        characterTrigrams(candidateTitleQuery),
-        effectiveWeights,
-      );
+      const titleCandidate = isStructuredGenreDiscovery
+        ? {
+            ...record,
+            signals: Object.fromEntries(
+              COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
+            ),
+            contributions: Object.fromEntries(
+              COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
+            ),
+            combinedScore: 0,
+          }
+        : scoreCombinedTitleCandidate(
+            record,
+            candidateTitleQuery,
+            characterTrigrams(candidateTitleQuery),
+            effectiveWeights,
+          );
       const fieldMatch = fieldMatches?.get(record.id);
       const titleScore = titleCandidate.combinedScore;
       const fieldScore = fieldMatch?.score ?? 0;
