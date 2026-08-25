@@ -659,6 +659,8 @@ function fullResultMovie(result: FullSearchResult): Movie {
 }
 
 export default function Home() {
+  const portfolioMode =
+    process.env.NEXT_PUBLIC_CINESEEK_DEPLOYMENT_MODE === "portfolio";
   const [input, setInput] = useState("dark sci-fi with philosophy");
   const [query, setQuery] = useState(input);
   const [mode, setMode] = useState<Mode>("hybrid");
@@ -725,6 +727,7 @@ export default function Home() {
   }, [selected]);
   useEffect(() => {
     if (!activePlan) return;
+    if (portfolioMode) return;
     const controller = new AbortController();
     void fetch("/api/query-coach", {
       method: "POST",
@@ -758,7 +761,7 @@ export default function Home() {
         });
       });
     return () => controller.abort();
-  }, [activePlan, query, coachRequest]);
+  }, [activePlan, query, coachRequest, portfolioMode]);
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/search", {
@@ -880,7 +883,7 @@ export default function Home() {
           <a href="#dataset">Dataset</a>
         </nav>
         <span className="statusBadge">
-          <i /> Local build
+          <i /> {portfolioMode ? "Public demo" : "Local build"}
         </span>
       </header>
 
@@ -1358,19 +1361,21 @@ export default function Home() {
                 ))}
               </ol>
             </details>
-            <div className="aiCoach" aria-live="polite">
-              <div className="coachTitle">
-                <span>✦ AI query-analysis coach</span>
-                {coach.model && <small>{coach.model}</small>}
+            {!portfolioMode && (
+              <div className="aiCoach" aria-live="polite">
+                <div className="coachTitle">
+                  <span>✦ AI query-analysis coach</span>
+                  {coach.model && <small>{coach.model}</small>}
+                </div>
+                {coach.status === "loading" && (
+                  <p className="coachLoading">Reviewing this analysis…</p>
+                )}
+                {coach.status === "ready" && <p>{coach.paragraph}</p>}
+                {coach.status === "unavailable" && (
+                  <p className="coachUnavailable">{coach.detail}</p>
+                )}
               </div>
-              {coach.status === "loading" && (
-                <p className="coachLoading">Reviewing this analysis…</p>
-              )}
-              {coach.status === "ready" && <p>{coach.paragraph}</p>}
-              {coach.status === "unavailable" && (
-                <p className="coachUnavailable">{coach.detail}</p>
-              )}
-            </div>
+            )}
             <div className="scoreMix">
               <div>
                 <span>Lexical</span>

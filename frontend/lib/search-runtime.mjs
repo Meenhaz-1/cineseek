@@ -1,25 +1,14 @@
-import { access, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { loadPlannerIndexes } from "./query-planner.mjs";
+import { RUNTIME_FILES, resolveRuntimeFile } from "./runtime-data.mjs";
 import { loadTitleSearchPipeline } from "./title-search-pipeline.mjs";
 
 let runtimePromise;
 let runtimeSourceKey;
 
-async function firstAvailable(paths) {
-  for (const candidate of paths) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next supported project layout.
-    }
-  }
-  throw new Error(`No readable data source found: ${paths.join(", ")}`);
-}
-
 export async function getSearchRuntime() {
-  const corpusPath = await firstAvailable([
+  const corpusPath = await resolveRuntimeFile(RUNTIME_FILES.corpus, [
     path.join(
       process.cwd(),
       "..",
@@ -31,7 +20,7 @@ export async function getSearchRuntime() {
     path.join(process.cwd(), "data", "movielens", "corpus.enriched.jsonl"),
     path.join(process.cwd(), "data", "movielens", "corpus.jsonl"),
   ]);
-  const registryPath = await firstAvailable([
+  const registryPath = await resolveRuntimeFile(RUNTIME_FILES.registry, [
     path.join(process.cwd(), "..", "data", "movielens", "entity-registry.json"),
     path.join(process.cwd(), "data", "movielens", "entity-registry.json"),
   ]);

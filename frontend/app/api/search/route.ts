@@ -4,6 +4,7 @@ import {
 } from "../../../lib/title-search-pipeline.mjs";
 import { planQuery } from "../../../lib/query-planner.mjs";
 import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
+import { loadRuntimeManifest } from "../../../lib/runtime-data.mjs";
 import {
   validateCombinedWeights,
   type CombinedWeights,
@@ -86,20 +87,36 @@ export async function POST(request: Request) {
       total: result.evaluation.candidateIds.length,
       hasMore: items.length < result.evaluation.candidateIds.length,
     };
-    return Response.json({
-      queryPlan,
-      retrieval: { ...publicTitleSearchResult(result), searchResults: results },
-      results,
-      timings: {
-        plannerMs: queryPlan.planner.planningMs,
-        retrievalMs: result.timings.totalMs,
-        endToEndMs: Number((performance.now() - totalStartedAt).toFixed(3)),
+    const endToEndMs = Number((performance.now() - totalStartedAt).toFixed(3));
+    const manifest = await loadRuntimeManifest();
+    return Response.json(
+      {
+        queryPlan,
+        retrieval: {
+          ...publicTitleSearchResult(result),
+          searchResults: results,
+        },
+        results,
+        timings: {
+          plannerMs: queryPlan.planner.planningMs,
+          retrievalMs: result.timings.totalMs,
+          endToEndMs,
+        },
+        sources: {
+          releaseId: manifest?.releaseId ?? "local-development",
+          movieCount: runtimeState.searchIndexes.tokens.records.size,
+        },
       },
-      sources: {
-        corpus: runtimeState.corpusPath,
-        registry: runtimeState.registryPath,
+      {
+        headers: {
+          "Cache-Control": "no-store",
+          "Server-Timing": `planner;dur=${queryPlan.planner.planningMs}, retrieval;dur=${result.timings.totalMs}, total;dur=${endToEndMs}`,
+          "X-CineSeek-Release": String(
+            manifest?.releaseId ?? "local-development",
+          ),
+        },
       },
-    });
+    );
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Search failed" },

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { isPortfolioMode } from "../../../lib/deployment-mode.mjs";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,16 @@ type CoachRequest = {
 };
 
 export async function POST(request: Request) {
+  if (isPortfolioMode()) {
+    return NextResponse.json(
+      {
+        error:
+          "The AI query coach is disabled in the public portfolio deployment.",
+        code: "PORTFOLIO_AI_DISABLED",
+      },
+      { status: 404 },
+    );
+  }
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       {

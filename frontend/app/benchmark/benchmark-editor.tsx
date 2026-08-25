@@ -45,7 +45,7 @@ function nextId(queries: Query[]) {
   return `q${String(largest + 1).padStart(3, "0")}`;
 }
 
-export function BenchmarkEditor() {
+export function BenchmarkEditor({ readOnly = false }: { readOnly?: boolean }) {
   const [payload, setPayload] = useState<Payload>();
   const [queries, setQueries] = useState<Query[]>([]);
   const [judgments, setJudgments] = useState<Judgment[]>([]);
@@ -276,23 +276,26 @@ export function BenchmarkEditor() {
           <span className="sectionKicker">Draft split editor</span>
           <h2 id="benchmark-editor-title">Queries and relevance judgments</h2>
           <p>
-            Loaded from <b>{payload.source}</b>. Saving writes
-            `queries.draft.jsonl` and `qrels/draft.tsv`; provisional files
-            remain unchanged.
+            Loaded from <b>{payload.source}</b>.{" "}
+            {readOnly
+              ? "This deployment lets you inspect the benchmark without changing its source files."
+              : "Saving writes queries.draft.jsonl and qrels/draft.tsv; provisional files remain unchanged."}
           </p>
         </div>
-        <div className="benchmarkActions">
-          <span className={dirty ? "dirty" : "clean"}>
-            {dirty ? "Unsaved changes" : "All changes saved"}
-          </span>
-          <button
-            type="button"
-            onClick={saveDraft}
-            disabled={!dirty || saveState.status === "saving"}
-          >
-            {saveState.status === "saving" ? "Saving…" : "Save draft"}
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="benchmarkActions">
+            <span className={dirty ? "dirty" : "clean"}>
+              {dirty ? "Unsaved changes" : "All changes saved"}
+            </span>
+            <button
+              type="button"
+              onClick={saveDraft}
+              disabled={!dirty || saveState.status === "saving"}
+            >
+              {saveState.status === "saving" ? "Saving…" : "Save draft"}
+            </button>
+          </div>
+        )}
       </header>
       {saveState.message && (
         <p
@@ -344,9 +347,11 @@ export function BenchmarkEditor() {
               onChange={(event) => setQueryFilter(event.target.value)}
               placeholder="ID, text, or category"
             />
-            <button type="button" onClick={addQuery}>
-              Add query
-            </button>
+            {!readOnly && (
+              <button type="button" onClick={addQuery}>
+                Add query
+              </button>
+            )}
           </div>
           <div className="benchmarkQueryList">
             {filteredQueries.map((query) => {
@@ -389,6 +394,7 @@ export function BenchmarkEditor() {
                     id="benchmark-query-text"
                     value={selected.text}
                     maxLength={300}
+                    disabled={readOnly}
                     onChange={(event) =>
                       updateSelected({ text: event.target.value })
                     }
@@ -401,6 +407,7 @@ export function BenchmarkEditor() {
                     id="benchmark-category"
                     list="benchmark-categories"
                     value={selected.category}
+                    disabled={readOnly}
                     onChange={(event) =>
                       updateSelected({
                         category: event.target.value
@@ -451,6 +458,7 @@ export function BenchmarkEditor() {
                           </span>
                           <select
                             value={judgment.score}
+                            disabled={readOnly}
                             onChange={(event) =>
                               updateGrade(
                                 judgment.corpusId,
@@ -465,13 +473,15 @@ export function BenchmarkEditor() {
                             ))}
                           </select>
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => removeJudgment(judgment.corpusId)}
-                          aria-label={`Remove judgment for ${judgment.movie?.title ?? judgment.corpusId}`}
-                        >
-                          Remove
-                        </button>
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => removeJudgment(judgment.corpusId)}
+                            aria-label={`Remove judgment for ${judgment.movie?.title ?? judgment.corpusId}`}
+                          >
+                            Remove
+                          </button>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -481,26 +491,28 @@ export function BenchmarkEditor() {
                     relevant movie before evaluating this query.
                   </p>
                 )}
-                <form className="movieLookup" onSubmit={searchMovies}>
-                  <label htmlFor="judgment-movie-search">
-                    Add a movie judgment
-                  </label>
-                  <div>
-                    <input
-                      id="judgment-movie-search"
-                      value={movieInput}
-                      onChange={(event) => setMovieInput(event.target.value)}
-                      placeholder="Search title or MovieLens ID"
-                    />
-                    <button type="submit">Find movies</button>
-                  </div>
-                </form>
+                {!readOnly && (
+                  <form className="movieLookup" onSubmit={searchMovies}>
+                    <label htmlFor="judgment-movie-search">
+                      Add a movie judgment
+                    </label>
+                    <div>
+                      <input
+                        id="judgment-movie-search"
+                        value={movieInput}
+                        onChange={(event) => setMovieInput(event.target.value)}
+                        placeholder="Search title or MovieLens ID"
+                      />
+                      <button type="submit">Find movies</button>
+                    </div>
+                  </form>
+                )}
                 {movieSearchError && (
                   <p className="benchmarkAlert" role="alert">
                     {movieSearchError}
                   </p>
                 )}
-                {movieMatches.length > 0 && (
+                {!readOnly && movieMatches.length > 0 && (
                   <div className="movieLookupResults" aria-live="polite">
                     {movieMatches.map((movie) => {
                       const alreadyAdded = judgments.some(

@@ -2,17 +2,24 @@
   "name": "cineseek-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "setup": "node scripts/bootstrap.mjs",
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "node scripts/fetch-runtime-data.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write \"app/**/*.{ts,tsx,css}\" \"lib/**/*.{mjs,mts}\" \"scripts/**/*.mjs\" \"*.{json,md,mjs,ts}\"",
     "format:check": "prettier --check \"app/**/*.{ts,tsx,css}\" \"lib/**/*.{mjs,mts}\" \"scripts/**/*.mjs\" \"*.{json,md,mjs,ts}\"",
     "scan:secrets": "node scripts/scan-secrets.mjs",
+    "data:release": "node scripts/publish-data-release.mjs",
+    "data:release:check": "node scripts/publish-data-release.mjs --dry-run",
+    "data:fetch": "node scripts/fetch-runtime-data.mjs",
     "test:tmdb": "node --test lib/tmdb-images.test.mjs scripts/tmdb-enrichment-lib.test.mjs scripts/enriched-corpus-lib.test.mjs scripts/entity-registry-lib.test.mjs",
-    "test:title-index": "node --test lib/exact-title-index.test.mjs lib/metadata-query.test.mjs lib/benchmark-editor.test.mjs lib/genre-benchmark.test.mjs lib/title-token-index.test.mjs lib/field-aware-index.test.mjs lib/person-name-suggestion.test.mjs lib/character-trigram-index.test.mjs lib/edit-distance.test.mjs lib/token-coverage.test.mjs lib/ordered-token-proximity.test.mjs lib/combined-title-ranker.test.mjs lib/title-search-pipeline.test.mjs lib/query-planner.test.mjs",
+    "test:title-index": "node --test lib/exact-title-index.test.mjs lib/metadata-query.test.mjs lib/benchmark-editor.test.mjs lib/genre-benchmark.test.mjs lib/data-release.test.mjs lib/title-token-index.test.mjs lib/field-aware-index.test.mjs lib/person-name-suggestion.test.mjs lib/character-trigram-index.test.mjs lib/edit-distance.test.mjs lib/token-coverage.test.mjs lib/ordered-token-proximity.test.mjs lib/combined-title-ranker.test.mjs lib/title-search-pipeline.test.mjs lib/query-planner.test.mjs",
     "benchmark:title": "node scripts/run-title-benchmark.mjs",
     "benchmark:compare": "node scripts/compare-title-benchmarks.mjs",
     "benchmark:summary": "node scripts/build-benchmark-summary.mjs",
@@ -26,7 +33,7 @@
     "workbook:parser-cases:verify": "node scripts/verify-query-parser-workbook.mjs"
   },
   "dependencies": {
-    "exceljs": "^4.4.0",
+    "@vercel/blob": "^2.3.0",
     "next": "16.3.0",
     "openai": "^7.5.0",
     "react": "19.2.0",
@@ -38,6 +45,7 @@
     "@types/react-dom": "^19.1.7",
     "eslint": "^9.34.0",
     "eslint-config-next": "16.3.0",
+    "exceljs": "^4.4.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.2"
   }

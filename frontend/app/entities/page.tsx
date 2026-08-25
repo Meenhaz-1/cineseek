@@ -8,6 +8,7 @@ export const metadata = {
 };
 
 export default function EntitiesPage() {
+  const portfolioMode = process.env.CINESEEK_DEPLOYMENT_MODE === "portfolio";
   return (
     <main className="entitiesPage">
       <header className="topbar entityTopbar">
@@ -26,7 +27,7 @@ export default function EntitiesPage() {
           <Link href="/#dataset">Dataset</Link>
         </nav>
         <span className="statusBadge">
-          <i /> Local build
+          <i /> {portfolioMode ? "Public demo" : "Local build"}
         </span>
       </header>
       <section className="entityHero">

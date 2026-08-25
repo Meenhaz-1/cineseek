@@ -8,6 +8,7 @@ __pycache__/
 /outputs/
 frontend/node_modules/
 frontend/.next/
+frontend/.runtime-data/
 frontend/.env.local
 /frontend/data/tmdb-enrichment.json
 /frontend/data/tmdb-enrichment-failures.json

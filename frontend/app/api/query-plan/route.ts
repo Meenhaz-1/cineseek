@@ -1,5 +1,6 @@
 import { planQuery } from "../../../lib/query-planner.mjs";
 import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
+import { loadRuntimeManifest } from "../../../lib/runtime-data.mjs";
 
 export const runtime = "nodejs";
 
@@ -26,10 +27,20 @@ export async function POST(request: Request) {
     }
     const runtimeState = await getSearchRuntime();
     const queryPlan = planQuery(body.query, runtimeState.plannerIndexes);
-    return Response.json({
-      queryPlan,
-      cache: runtimeState.cached ? "warm" : "built for this request",
-    });
+    const manifest = await loadRuntimeManifest();
+    return Response.json(
+      {
+        queryPlan,
+        cache: runtimeState.cached ? "warm" : "built for this request",
+        releaseId: manifest?.releaseId ?? "local-development",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+          "Server-Timing": `planner;dur=${queryPlan.planner.planningMs}`,
+        },
+      },
+    );
   } catch (error) {
     return Response.json(
       {

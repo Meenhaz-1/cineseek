@@ -1,5 +1,9 @@
 import path from "node:path";
 import { readFile, stat } from "node:fs/promises";
+import {
+  RUNTIME_FILES,
+  resolveRuntimeFile,
+} from "../../../lib/runtime-data.mjs";
 
 export const runtime = "nodejs";
 
@@ -48,13 +52,10 @@ let registryPromise: Promise<Registry> | undefined;
 let registryKey: string | undefined;
 
 async function loadRegistry() {
-  const registryPath = path.join(
-    process.cwd(),
-    "..",
-    "data",
-    "movielens",
-    "entity-registry.json",
-  );
+  const registryPath = await resolveRuntimeFile(RUNTIME_FILES.registry, [
+    path.join(process.cwd(), "..", "data", "movielens", "entity-registry.json"),
+    path.join(process.cwd(), "data", "movielens", "entity-registry.json"),
+  ]);
   const fileStats = await stat(registryPath);
   const sourceKey = `${fileStats.size}:${fileStats.mtimeMs}`;
   if (!registryPromise || registryKey !== sourceKey) {

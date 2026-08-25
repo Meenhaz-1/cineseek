@@ -14,6 +14,7 @@ const outputPath = path.join(
   outputDir,
   "query-understanding-parser-cases.xlsx",
 );
+const casesPath = path.join(outputDir, "parser-cases.json");
 
 const testCase = (
   caseId,
@@ -843,9 +844,11 @@ parserSheet.headerFooter.oddFooter = "CineSeek · Query Understanding";
 
 await fs.mkdir(outputDir, { recursive: true });
 await workbook.xlsx.writeFile(outputPath);
+await fs.writeFile(casesPath, `${JSON.stringify(cases, null, 2)}\n`, "utf8");
 console.log(
   JSON.stringify({
     outputPath,
+    casesPath,
     caseCount: cases.length,
     sheets: workbook.worksheets.map((sheet) => sheet.name),
   }),

@@ -122,6 +122,15 @@ input:focus-visible {
   margin-right: 6px;
   box-shadow: 0 0 8px #80f08f;
 }
+
+.portfolioNotice {
+  max-width: 78rem;
+  margin: 0 auto 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--text);
+}
 .hero {
   min-height: 690px;
   position: relative;

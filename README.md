@@ -107,7 +107,7 @@ for the UI source artifact.
 
 ## Five-minute local setup
 
-Requirements: Node.js 20+, Python 3.11+, npm, and an internet connection for
+Requirements: Node.js 24+, Python 3.11+, npm, and an internet connection for
 the official MovieLens download.
 
 ```bash
@@ -161,6 +161,14 @@ Run these from `frontend/` unless noted otherwise.
 | `npm run build` | Create the production Next.js build |
 | `npm run scan:secrets` | Scan public source files for common credential patterns |
 | `python -m pytest` | Run Python corpus and evaluator tests from the repository root |
+
+## Vercel deployment
+
+CineSeek supports a public, read-only Vercel deployment backed by an immutable
+private Blob data release. Search, query planning, entities, diagnostics, and
+benchmark evidence remain available; public benchmark writes and AI spending
+are disabled. See [the Vercel deployment guide](docs/VERCEL.md) for data release,
+environment, Preview verification, and rollback instructions.
 
 ## Repository map
 

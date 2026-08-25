@@ -18,6 +18,15 @@ import {
   displayMovieLensTitle,
   exactTitleKey,
 } from "../../../lib/exact-title-index.mjs";
+import {
+  isPortfolioMode,
+  portfolioWriteResponse,
+} from "../../../lib/deployment-mode.mjs";
+import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
+import {
+  RUNTIME_FILES,
+  resolveRuntimeFile,
+} from "../../../lib/runtime-data.mjs";
 
 export const runtime = "nodejs";
 
@@ -53,10 +62,13 @@ const draftQueriesPath = path.join(benchmarkRoot, "queries.draft.jsonl");
 const draftQrelsPath = path.join(benchmarkRoot, "qrels", "draft.tsv");
 
 async function loadCorpus() {
-  corpusPromise ??= readFile(
-    path.join(process.cwd(), "..", "data", "movielens", "corpus.jsonl"),
-    "utf8",
-  ).then((contents) => {
+  const corpusPath = isPortfolioMode()
+    ? (await getSearchRuntime()).corpusPath
+    : await resolveRuntimeFile(RUNTIME_FILES.corpus, [
+        path.join(process.cwd(), "..", "data", "movielens", "corpus.jsonl"),
+        path.join(process.cwd(), "data", "movielens", "corpus.jsonl"),
+      ]);
+  corpusPromise ??= readFile(corpusPath, "utf8").then((contents) => {
     const movies = contents
       .split(/\r?\n/)
       .filter(Boolean)
@@ -95,6 +107,27 @@ async function revisionFor(
 }
 
 async function loadBenchmark() {
+  if (isPortfolioMode()) {
+    const [queryPath, qrelsPath] = await Promise.all([
+      resolveRuntimeFile(RUNTIME_FILES.queries, [
+        path.join(benchmarkRoot, "queries.provisional.jsonl"),
+      ]),
+      resolveRuntimeFile(RUNTIME_FILES.qrels, [
+        path.join(benchmarkRoot, "qrels", "provisional.tsv"),
+      ]),
+    ]);
+    const [queryContents, qrelsContents, revision] = await Promise.all([
+      readFile(queryPath, "utf8"),
+      readFile(qrelsPath, "utf8"),
+      revisionFor(queryPath, qrelsPath, "provisional"),
+    ]);
+    return {
+      source: "provisional",
+      revision,
+      queries: parseBenchmarkQueries(queryContents),
+      judgments: parseBenchmarkQrels(qrelsContents),
+    };
+  }
   const hasDraft = await Promise.all([
     exists(draftQueriesPath),
     exists(draftQrelsPath),
@@ -174,6 +207,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (isPortfolioMode()) return portfolioWriteResponse();
   try {
     const input = (await request.json()) as {
       expectedRevision?: unknown;

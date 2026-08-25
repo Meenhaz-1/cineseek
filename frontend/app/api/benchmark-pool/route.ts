@@ -29,6 +29,14 @@ import {
 import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
 import { planQuery } from "../../../lib/query-planner.mjs";
 import { runTitleSearch } from "../../../lib/title-search-pipeline.mjs";
+import {
+  isPortfolioMode,
+  portfolioWriteResponse,
+} from "../../../lib/deployment-mode.mjs";
+import {
+  RUNTIME_FILES,
+  resolveRuntimeFile,
+} from "../../../lib/runtime-data.mjs";
 
 export const runtime = "nodejs";
 
@@ -168,8 +176,76 @@ function publicState(
   };
 }
 
+async function portfolioDemoState() {
+  const [runtimeState, queryText] = await Promise.all([
+    getSearchRuntime(),
+    resolveRuntimeFile(RUNTIME_FILES.queries, [queriesPath]).then((filePath) =>
+      readFile(filePath, "utf8"),
+    ),
+  ]);
+  const queries = parseBenchmarkQueries(queryText).filter(({ id }) =>
+    GENRE_QUERY_IDS.includes(id),
+  );
+  const pool = queries.map((query) => {
+    const plan = planQuery(query.text, runtimeState.plannerIndexes);
+    const result = runTitleSearch(runtimeState.searchIndexes, plan, {
+      rankLimit: 10,
+    });
+    return {
+      queryId: query.id,
+      queryText: query.text,
+      documents: result.evaluation.rankedResults.map(({ id }) => {
+        const record = runtimeState.searchIndexes.tokens.records.get(id);
+        return {
+          ...record,
+          docId: id,
+          ownReview: undefined,
+          reviewCount: 0,
+          conflict: false,
+          adjudication: undefined,
+          finalGrade: null,
+        };
+      }),
+    };
+  });
+  return {
+    version: "portfolio-demo-v1",
+    status: "frozen",
+    revision: "portfolio-demo",
+    queryIds: queries.map(({ id }) => id),
+    progress: pool.map(({ queryId, documents }) => ({
+      queryId,
+      poolSize: documents.length,
+      twiceReviewed: 0,
+      conflicts: 0,
+      finalized: 0,
+    })),
+    publication: {
+      publishable: false,
+      poolReviewComplete: false,
+      queries: pool.map(({ queryId, documents }) => ({
+        queryId,
+        top10Count: documents.length,
+        inPoolCount: documents.length,
+        finalizedCount: 0,
+        ready: false,
+        actionRequired: "complete_reviews",
+        missingFromPool: [],
+        awaitingReviews: documents.map(({ docId, title }) => ({
+          docId,
+          title,
+          reviewCount: 0,
+          conflict: false,
+        })),
+      })),
+    },
+    pool,
+  };
+}
+
 export async function GET(request: Request) {
   try {
+    if (isPortfolioMode()) return Response.json(await portfolioDemoState());
     if (!(await exists(activePath)))
       return Response.json({ status: "not_built", queryIds: GENRE_QUERY_IDS });
     const [state, data] = await Promise.all([loadState(), sourceData()]);
@@ -189,6 +265,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (isPortfolioMode()) return portfolioWriteResponse();
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;

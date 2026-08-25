@@ -9,6 +9,7 @@ export const metadata = {
 };
 
 export default function BenchmarkPage() {
+  const readOnly = process.env.CINESEEK_DEPLOYMENT_MODE === "portfolio";
   return (
     <main className="benchmarkPage">
       <header className="topbar entityTopbar">
@@ -27,7 +28,7 @@ export default function BenchmarkPage() {
           <Link href="/#dataset">Dataset</Link>
         </nav>
         <span className="statusBadge">
-          <i /> Local build
+          <i /> {readOnly ? "Public demo" : "Local build"}
         </span>
       </header>
       <section className="benchmarkHero">
@@ -38,18 +39,29 @@ export default function BenchmarkPage() {
           <em>Improve the evidence.</em>
         </h1>
         <p>
-          Edit queries and grade relevant movies without overwriting the
-          generated provisional benchmark.
+          {readOnly
+            ? "Explore the provisional queries and relevance evidence used to evaluate CineSeek. Public changes are intentionally disabled."
+            : "Edit queries and grade relevant movies without overwriting the generated provisional benchmark."}
         </p>
       </section>
-      <BenchmarkEditor />
-      <GenreReview />
+      {readOnly && (
+        <p className="portfolioNotice" role="status">
+          Public read-only demo: browse the evidence here, then run CineSeek
+          locally to create or publish benchmark changes.
+        </p>
+      )}
+      <BenchmarkEditor readOnly={readOnly} />
+      <GenreReview readOnly={readOnly} />
       <footer>
         <Link className="brand" href="/">
           <span className="brandMark">C</span>
           <span>CineSeek</span>
         </Link>
-        <p>Draft edits remain local until reviewed and promoted</p>
+        <p>
+          {readOnly
+            ? "Public benchmark evidence is read-only"
+            : "Draft edits remain local until reviewed and promoted"}
+        </p>
         <Link href="/">Return to search</Link>
       </footer>
     </main>

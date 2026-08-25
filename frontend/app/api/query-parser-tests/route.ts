@@ -1,9 +1,12 @@
-import ExcelJS from "exceljs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { planQuery } from "../../../lib/query-planner.mjs";
 import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
+import {
+  RUNTIME_FILES,
+  resolveRuntimeFile,
+} from "../../../lib/runtime-data.mjs";
 
 export const runtime = "nodejs";
 
@@ -14,6 +17,26 @@ type ParserCaseResult = {
   query: string;
   passed: boolean;
   mismatches: Mismatch[];
+};
+type ParserCase = {
+  caseId: string;
+  category: string;
+  query: string;
+  expectedNormalized: string;
+  expectedCorrection: string;
+  expectedSuggestion: string;
+  expectedIntent: string;
+  expectedGenres: string;
+  expectedPeople: string;
+  expectedYearMin: string | number;
+  expectedYearMax: string | number;
+  expectedRatingSource: string;
+  expectedRatingMin: string | number;
+  expectedSort: string;
+  expectedConcepts: string;
+  expectedUnresolved: string;
+  implementationStatus: string;
+  expectedRetrievalQuery: string;
 };
 
 function splitValues(value: string) {
@@ -34,15 +57,20 @@ function display(value: unknown) {
   return Array.isArray(value) ? value.join(" | ") || "—" : String(value);
 }
 
-async function loadWorkbookPath() {
+async function loadCasesPath() {
+  try {
+    return await resolveRuntimeFile(RUNTIME_FILES.parserCases);
+  } catch {
+    // Fall back to the generated local case specification below.
+  }
   const candidates = [
     path.resolve(
       process.cwd(),
-      "../outputs/query-understanding-parser-cases/query-understanding-parser-cases.xlsx",
+      "../outputs/query-understanding-parser-cases/parser-cases.json",
     ),
     path.resolve(
       process.cwd(),
-      "outputs/query-understanding-parser-cases/query-understanding-parser-cases.xlsx",
+      "outputs/query-understanding-parser-cases/parser-cases.json",
     ),
   ];
   for (const candidate of candidates) {
@@ -54,29 +82,30 @@ async function loadWorkbookPath() {
     }
   }
   throw new Error(
-    "Parser workbook not found. Run npm.cmd run workbook:parser-cases from frontend first.",
+    "Parser cases not found. Run npm.cmd run workbook:parser-cases from frontend first.",
   );
 }
 
 export async function POST() {
   try {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(await loadWorkbookPath());
-    const sheet = workbook.getWorksheet("Parser Cases");
-    if (!sheet) throw new Error("The Parser Cases sheet is missing.");
+    const cases = JSON.parse(
+      await fs.readFile(
+        /* turbopackIgnore: true */ await loadCasesPath(),
+        "utf8",
+      ),
+    ) as ParserCase[];
+    if (!Array.isArray(cases))
+      throw new Error("The parser case file is invalid.");
     const { plannerIndexes } = await getSearchRuntime();
     const results: ParserCaseResult[] = [];
     let planned = 0;
 
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
-      const row = sheet.getRow(rowNumber);
-      if (row.getCell(17).text.trim() !== "Supported") {
+    for (const parserCase of cases) {
+      if (parserCase.implementationStatus !== "Supported") {
         planned += 1;
         continue;
       }
-      const caseId = row.getCell(1).text.trim();
-      const category = row.getCell(2).text.trim();
-      const query = row.getCell(3).text;
+      const { caseId, category, query } = parserCase;
       const analysis = planQuery(query, plannerIndexes);
       const mismatches: Mismatch[] = [];
       const check = (field: string, expected: unknown, actual: unknown) => {
@@ -100,10 +129,14 @@ export async function POST() {
           });
       };
 
-      check("normalized", row.getCell(4).text, analysis.effectiveQuery);
+      check(
+        "normalized",
+        parserCase.expectedNormalized,
+        analysis.effectiveQuery,
+      );
       check(
         "correction",
-        row.getCell(5).text,
+        parserCase.expectedCorrection,
         analysis.corrections
           .filter(({ policy }) => policy === "automatic")
           .map(
@@ -112,29 +145,33 @@ export async function POST() {
           )
           .join(" | "),
       );
-      check("suggestion", row.getCell(6).text, analysis.suggestedQuery);
-      check("intent", row.getCell(7).text, analysis.intent);
+      check(
+        "suggestion",
+        parserCase.expectedSuggestion,
+        analysis.suggestedQuery,
+      );
+      check("intent", parserCase.expectedIntent, analysis.intent);
       checkMembers(
         "genres",
-        splitValues(row.getCell(8).text),
+        splitValues(parserCase.expectedGenres),
         analysis.entities.genres,
       );
       checkMembers(
         "people",
-        splitValues(row.getCell(9).text),
+        splitValues(parserCase.expectedPeople),
         analysis.entities.people.map(({ name }) => name),
       );
-      check("year min", row.getCell(10).text, analysis.filters.yearMin);
-      check("year max", row.getCell(11).text, analysis.filters.yearMax);
+      check("year min", parserCase.expectedYearMin, analysis.filters.yearMin);
+      check("year max", parserCase.expectedYearMax, analysis.filters.yearMax);
 
-      const ratingSource = row.getCell(12).text.trim();
-      const expectedRating = row.getCell(13).text;
+      const ratingSource = parserCase.expectedRatingSource;
+      const expectedRating = parserCase.expectedRatingMin;
       if (ratingSource === "IMDb") {
         check(
           "IMDb rating min",
           expectedRating,
           analysis.unavailableFilters.some((item) =>
-            item.includes(expectedRating),
+            item.includes(String(expectedRating)),
           )
             ? expectedRating
             : undefined,
@@ -148,27 +185,27 @@ export async function POST() {
       }
       check(
         "sort",
-        row.getCell(14).text,
+        parserCase.expectedSort,
         analysis.sort?.field === "year" && analysis.sort.direction === "desc"
           ? "year_desc"
           : "",
       );
       checkMembers(
         "ranking concepts",
-        splitValues(row.getCell(15).text),
+        splitValues(parserCase.expectedConcepts),
         analysis.routes.concepts,
       );
       check(
         "unresolved",
-        row.getCell(16).text,
+        parserCase.expectedUnresolved,
         analysis.unavailableFilters.length
           ? "IMDb rating values unavailable"
           : "",
       );
-      if (row.getCell(20).text.trim())
+      if (String(parserCase.expectedRetrievalQuery).trim())
         check(
           "retrieval query",
-          row.getCell(20).text,
+          parserCase.expectedRetrievalQuery,
           analysis.routes.titleQuery,
         );
       results.push({

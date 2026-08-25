@@ -67,8 +67,10 @@ const GRADES = [
   { value: 3, label: "Exemplary", hint: "One of the best possible results" },
 ];
 
-export function GenreReview() {
-  const [reviewerId, setReviewerId] = useState("");
+export function GenreReview({ readOnly = false }: { readOnly?: boolean }) {
+  const [reviewerId, setReviewerId] = useState(
+    readOnly ? "portfolio-demo" : "",
+  );
   const [payload, setPayload] = useState<Payload>();
   const [selectedId, setSelectedId] = useState("q021");
   const [showCompleted, setShowCompleted] = useState(false);
@@ -152,6 +154,39 @@ export function GenreReview() {
   }
 
   async function saveReview(movie: Movie, key: string, grade: number) {
+    if (readOnly) {
+      setPayload((current) =>
+        current
+          ? {
+              ...current,
+              pool: current.pool?.map((query) => ({
+                ...query,
+                documents: query.documents.map((candidate) =>
+                  query.queryId === selectedId &&
+                  candidate.docId === movie.docId
+                    ? {
+                        ...candidate,
+                        ownReview: {
+                          reviewerId: "portfolio-demo",
+                          grade,
+                          notes: notes[key] ?? "",
+                          reviewedAt: new Date().toISOString(),
+                        },
+                        reviewCount: 1,
+                      }
+                    : candidate,
+                ),
+              })),
+            }
+          : current,
+      );
+      setLastSavedKey(key);
+      setMessage({
+        kind: "status",
+        text: `Demo grade ${grade} · ${GRADES[grade].label} selected for ${movie.title}. It exists only in this browser session and is not part of CineSeek's benchmark.`,
+      });
+      return;
+    }
     const saved = await act(
       {
         action: "review",
@@ -205,25 +240,27 @@ export function GenreReview() {
           </span>
           <h2 id="genre-review-title">Genre judgment pool</h2>
           <p>
-            Each grade is your independent vote. The benchmark gets a final
-            grade only after a second reviewer agrees, or an adjudicator
-            resolves a disagreement.
+            {readOnly
+              ? "Try grading the current top results to understand the review workflow. Demo grades stay only in this browser session and never change the benchmark."
+              : "Each grade is your independent vote. The benchmark gets a final grade only after a second reviewer agrees, or an adjudicator resolves a disagreement."}
           </p>
         </div>
-        <label>
-          <span>Reviewer ID</span>
-          <input
-            value={reviewerId}
-            maxLength={80}
-            onChange={(event) => setReviewerId(event.target.value)}
-            onBlur={() =>
-              void load().catch((error) =>
-                setMessage({ kind: "error", text: error.message }),
-              )
-            }
-            placeholder="e.g. reviewer-a"
-          />
-        </label>
+        {!readOnly && (
+          <label>
+            <span>Reviewer ID</span>
+            <input
+              value={reviewerId}
+              maxLength={80}
+              onChange={(event) => setReviewerId(event.target.value)}
+              onBlur={() =>
+                void load().catch((error) =>
+                  setMessage({ kind: "error", text: error.message }),
+                )
+              }
+              placeholder="e.g. reviewer-a"
+            />
+          </label>
+        )}
       </header>
       <ol className="genreReviewSteps" aria-label="How genre review works">
         <li>
@@ -254,21 +291,24 @@ export function GenreReview() {
       {payload?.status === "not_built" && (
         <div className="genreReviewEmpty">
           <p>
-            Build once to freeze a reproducible pool from production, the frozen
-            baseline, genre quality, text evidence, and existing judgments.
+            {readOnly
+              ? "The public repository preserves the review protocol, while active reviewer data remains private. Run CineSeek locally to build and grade a frozen review pool."
+              : "Build once to freeze a reproducible pool from production, the frozen baseline, genre quality, text evidence, and existing judgments."}
           </p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              void act(
-                { action: "build" },
-                "The q021–q030 pool is frozen and ready for review.",
-              )
-            }
-          >
-            {busy ? "Building…" : "Build and freeze review pool"}
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void act(
+                  { action: "build" },
+                  "The q021–q030 pool is frozen and ready for review.",
+                )
+              }
+            >
+              {busy ? "Building…" : "Build and freeze review pool"}
+            </button>
+          )}
         </div>
       )}
       {payload?.pool && (
@@ -316,23 +356,25 @@ export function GenreReview() {
               />{" "}
               Show movies I already graded
             </label>
-            <button
-              type="button"
-              aria-describedby="publication-readiness"
-              disabled={
-                busy ||
-                payload.status === "published" ||
-                !payload.publication?.publishable
-              }
-              onClick={() =>
-                void act(
-                  { action: "publish" },
-                  "Published immutable genre-reviewed-v1 artifacts.",
-                )
-              }
-            >
-              Publish reviewed v1
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                aria-describedby="publication-readiness"
+                disabled={
+                  busy ||
+                  payload.status === "published" ||
+                  !payload.publication?.publishable
+                }
+                onClick={() =>
+                  void act(
+                    { action: "publish" },
+                    "Published immutable genre-reviewed-v1 artifacts.",
+                  )
+                }
+              >
+                Publish reviewed v1
+              </button>
+            )}
           </div>
           {selectedPublication && (
             <div
@@ -382,7 +424,7 @@ export function GenreReview() {
               )}
             </div>
           )}
-          {!reviewerId.trim() && (
+          {!readOnly && !reviewerId.trim() && (
             <p className="genreReviewMessage error" role="alert">
               Start by entering your reviewer ID. Two distinct reviewer IDs are
               required for every movie.
@@ -437,18 +479,22 @@ export function GenreReview() {
                         </strong>
                       </div>
                       <p>
-                        {movie.reviewCount < 2
-                          ? `Review ${movie.reviewCount} of 2. Waiting for another reviewer before a final grade is assigned.`
-                          : movie.finalGrade === null
-                            ? "Two reviews are present, but an adjudicator must resolve the disagreement."
-                            : `This movie now has final grade ${movie.finalGrade}.`}
+                        {readOnly
+                          ? "This temporary example is not saved to the server and does not affect CineSeek's benchmark."
+                          : movie.reviewCount < 2
+                            ? `Review ${movie.reviewCount} of 2. Waiting for another reviewer before a final grade is assigned.`
+                            : movie.finalGrade === null
+                              ? "Two reviews are present, but an adjudicator must resolve the disagreement."
+                              : `This movie now has final grade ${movie.finalGrade}.`}
                       </p>
                       <button type="button" onClick={continueReviewing}>
                         Continue to next ungraded movie
                       </button>
                     </div>
                   )}
-                  <fieldset disabled={busy || !reviewerId.trim()}>
+                  <fieldset
+                    disabled={busy || (!readOnly && !reviewerId.trim())}
+                  >
                     <legend>
                       {movie.ownReview
                         ? "Change your grade"
@@ -493,7 +539,9 @@ export function GenreReview() {
                       <span>
                         {selectedGrade === undefined
                           ? "Select a grade to continue."
-                          : `Selected: ${selectedGrade} · ${GRADES[selectedGrade].label}. Nothing is saved yet.`}
+                          : readOnly
+                            ? `Selected: ${selectedGrade} · ${GRADES[selectedGrade].label}. This will remain only in this browser session.`
+                            : `Selected: ${selectedGrade} · ${GRADES[selectedGrade].label}. Nothing is saved yet.`}
                       </span>
                       <button
                         type="button"
@@ -505,9 +553,11 @@ export function GenreReview() {
                       >
                         {busy
                           ? "Saving…"
-                          : movie.ownReview
-                            ? "Save changed grade"
-                            : "Save my grade"}
+                          : readOnly
+                            ? "Keep demo grade"
+                            : movie.ownReview
+                              ? "Save changed grade"
+                              : "Save my grade"}
                       </button>
                     </div>
                   </fieldset>
