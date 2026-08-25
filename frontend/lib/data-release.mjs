@@ -29,6 +29,7 @@ export function validateReleaseManifest(manifest, now = new Date()) {
   for (const key of [
     "corpus",
     "registry",
+    "plannerRegistry",
     "queries",
     "qrels",
     "summary",

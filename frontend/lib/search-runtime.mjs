@@ -20,7 +20,15 @@ export async function getSearchRuntime() {
     path.join(process.cwd(), "data", "movielens", "corpus.enriched.jsonl"),
     path.join(process.cwd(), "data", "movielens", "corpus.jsonl"),
   ]);
-  const registryPath = await resolveRuntimeFile(RUNTIME_FILES.registry, [
+  const registryPath = await resolveRuntimeFile(RUNTIME_FILES.plannerRegistry, [
+    path.join(
+      process.cwd(),
+      "..",
+      "data",
+      "movielens",
+      "planner-registry.json",
+    ),
+    path.join(process.cwd(), "data", "movielens", "planner-registry.json"),
     path.join(process.cwd(), "..", "data", "movielens", "entity-registry.json"),
     path.join(process.cwd(), "data", "movielens", "entity-registry.json"),
   ]);

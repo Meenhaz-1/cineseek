@@ -4,6 +4,7 @@ import path from "node:path";
 export const RUNTIME_FILES = Object.freeze({
   corpus: "corpus.enriched.jsonl",
   registry: "entity-registry.json",
+  plannerRegistry: "planner-registry.json",
   queries: "benchmark-queries.jsonl",
   qrels: "benchmark-qrels.tsv",
   summary: "benchmark-summary.json",

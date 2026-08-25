@@ -3,12 +3,43 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   agentRules: false,
   outputFileTracingIncludes: {
-    "/api/search": ["./.runtime-data/**/*"],
-    "/api/query-plan": ["./.runtime-data/**/*"],
-    "/api/entities": ["./.runtime-data/**/*"],
-    "/api/benchmark-editor": ["./.runtime-data/**/*"],
-    "/api/benchmark-pool": ["./.runtime-data/**/*"],
-    "/api/health": ["./.runtime-data/**/*"],
+    "/api/search": [
+      "./.runtime-data/corpus.enriched.jsonl",
+      "./.runtime-data/planner-registry.json",
+      "./.runtime-data/manifest.json",
+    ],
+    "/api/query-plan": [
+      "./.runtime-data/corpus.enriched.jsonl",
+      "./.runtime-data/planner-registry.json",
+      "./.runtime-data/manifest.json",
+    ],
+    "/api/entities": [
+      "./.runtime-data/entity-registry.json",
+      "./.runtime-data/manifest.json",
+    ],
+    "/api/benchmark-editor": [
+      "./.runtime-data/corpus.enriched.jsonl",
+      "./.runtime-data/benchmark-queries.jsonl",
+      "./.runtime-data/benchmark-qrels.tsv",
+      "./.runtime-data/manifest.json",
+    ],
+    "/api/benchmark-pool": [
+      "./.runtime-data/corpus.enriched.jsonl",
+      "./.runtime-data/planner-registry.json",
+      "./.runtime-data/benchmark-queries.jsonl",
+      "./.runtime-data/manifest.json",
+    ],
+    "/api/query-parser-tests": [
+      "./.runtime-data/corpus.enriched.jsonl",
+      "./.runtime-data/planner-registry.json",
+      "./.runtime-data/parser-cases.json",
+      "./.runtime-data/manifest.json",
+    ],
+    "/api/health": [
+      "./.runtime-data/corpus.enriched.jsonl",
+      "./.runtime-data/planner-registry.json",
+      "./.runtime-data/manifest.json",
+    ],
   },
   async headers() {
     return [

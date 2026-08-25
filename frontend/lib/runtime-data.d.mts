@@ -1,6 +1,7 @@
 export const RUNTIME_FILES: Readonly<{
   corpus: string;
   registry: string;
+  plannerRegistry: string;
   queries: string;
   qrels: string;
   summary: string;

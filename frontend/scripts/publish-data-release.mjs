@@ -86,6 +86,35 @@ if (movieCount !== EXPECTED_MOVIE_COUNT)
 const registry = JSON.parse(contentsByKey.registry.toString("utf8"));
 if (registry.stats?.movies !== movieCount)
   throw new Error("Entity registry movie count does not match the corpus.");
+const plannerRegistry = {
+  stats: registry.stats,
+  entities: {
+    people: registry.entities.people.map(
+      ({
+        id,
+        name,
+        roles,
+        movieCount,
+        actorMovieCount,
+        directorMovieCount,
+      }) => ({
+        id,
+        name,
+        roles,
+        movieCount,
+        actorMovieCount,
+        directorMovieCount,
+      }),
+    ),
+    genres: registry.entities.genres.map(({ id, name }) => ({ id, name })),
+    tags: registry.entities.tags.map(({ id, name }) => ({ id, name })),
+  },
+};
+sources.plannerRegistry = {
+  localPath: null,
+  filename: "planner-registry.json",
+};
+contentsByKey.plannerRegistry = Buffer.from(JSON.stringify(plannerRegistry));
 const enrichmentCache = JSON.parse(await readFile(enrichmentCachePath, "utf8"));
 const enrichmentFetchedAt = new Date(enrichmentCache.fetched_at);
 if (!Number.isFinite(enrichmentFetchedAt.valueOf()))

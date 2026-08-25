@@ -44,6 +44,7 @@ await mkdir(destination, { recursive: true });
 const outputNames = {
   corpus: RUNTIME_FILES.corpus,
   registry: RUNTIME_FILES.registry,
+  plannerRegistry: RUNTIME_FILES.plannerRegistry,
   queries: RUNTIME_FILES.queries,
   qrels: RUNTIME_FILES.qrels,
   summary: RUNTIME_FILES.summary,

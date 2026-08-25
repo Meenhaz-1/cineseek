@@ -21,6 +21,7 @@ function manifest(overrides = {}) {
     files: {
       corpus: file,
       registry: file,
+      plannerRegistry: file,
       queries: file,
       qrels: file,
       summary: file,
