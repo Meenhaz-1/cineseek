@@ -45,6 +45,16 @@ export function scoreCombinedTitleCandidates(
     exactTitleIds?: Set<string>;
     genreFallbackCandidateIds?: Set<string>;
     genreFallbackQuery?: string;
+    structuredGenreRanking?: boolean;
+    ratingStats?: {
+      ratingVotes: number;
+      corpusRatingMean: number;
+      maxRatingCount: number;
+      ratingById: Map<
+        string,
+        { bayesianRating: number; ratingEvidence: number }
+      >;
+    };
   },
 ): {
   method:

@@ -114,10 +114,11 @@ export function scoreCombinedTitleCandidates(
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
     requestedGenres.length > 0;
-  let ratingVotes = 0;
+  const cachedRatingStats = rankingContext.ratingStats;
+  let ratingVotes = cachedRatingStats?.ratingVotes ?? 0;
   let weightedRatingSum = 0;
-  let maxRatingCount = 1;
-  if (isStructuredGenreDiscovery) {
+  let maxRatingCount = cachedRatingStats?.maxRatingCount ?? 1;
+  if (isStructuredGenreDiscovery && !cachedRatingStats) {
     for (const record of records.values()) {
       const ratingCount = record.ratingCount ?? 0;
       ratingVotes += ratingCount;
@@ -125,8 +126,11 @@ export function scoreCombinedTitleCandidates(
       maxRatingCount = Math.max(maxRatingCount, ratingCount);
     }
   }
-  const corpusRatingMean =
-    ratingVotes > 0 ? weightedRatingSum / ratingVotes : 0;
+  const corpusRatingMean = cachedRatingStats
+    ? cachedRatingStats.corpusRatingMean
+    : ratingVotes > 0
+      ? weightedRatingSum / ratingVotes
+      : 0;
   const zeroSignals = Object.fromEntries(
     COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
   );
@@ -178,13 +182,16 @@ export function scoreCombinedTitleCandidates(
           : 0;
       const ratingCount = record.ratingCount ?? 0;
       const averageRating = record.averageRating ?? corpusRatingMean;
-      const bayesianRating =
-        ratingVotes > 0
+      const cachedRating = cachedRatingStats?.ratingById.get(record.id);
+      const bayesianRating = cachedRating
+        ? cachedRating.bayesianRating
+        : ratingVotes > 0
           ? (ratingCount * averageRating + 20 * corpusRatingMean) /
             (ratingCount + 20)
           : 0;
-      const ratingEvidence =
-        Math.log1p(ratingCount) / Math.log1p(maxRatingCount);
+      const ratingEvidence = cachedRating
+        ? cachedRating.ratingEvidence
+        : Math.log1p(ratingCount) / Math.log1p(maxRatingCount);
       const structuredGenreScore = isStructuredGenreDiscovery
         ? Number(
             (

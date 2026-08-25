@@ -14,6 +14,12 @@ export type TitleSearchPipeline = {
   tokens: TitleTokenIndex;
   fields: FieldAwareIndex;
   trigrams: CharacterTrigramIndex;
+  ratingStats: {
+    ratingVotes: number;
+    corpusRatingMean: number;
+    maxRatingCount: number;
+    ratingById: Map<string, { bayesianRating: number; ratingEvidence: number }>;
+  };
   buildMs: number;
 };
 export type TitleSearchInput = {

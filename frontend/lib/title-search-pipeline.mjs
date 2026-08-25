@@ -30,7 +30,44 @@ export function buildTitleSearchPipeline(documents) {
   const tokens = buildTitleTokenIndex(documents);
   const fields = buildFieldAwareIndex(tokens.records);
   const trigrams = buildCharacterTrigramIndex(documents);
-  return { exact, tokens, fields, trigrams, buildMs: roundedMs(startedAt) };
+  let ratingVotes = 0;
+  let weightedRatingSum = 0;
+  let maxRatingCount = 1;
+  for (const record of tokens.records.values()) {
+    const ratingCount = record.ratingCount ?? 0;
+    ratingVotes += ratingCount;
+    weightedRatingSum += (record.averageRating ?? 0) * ratingCount;
+    maxRatingCount = Math.max(maxRatingCount, ratingCount);
+  }
+  const corpusRatingMean =
+    ratingVotes > 0 ? weightedRatingSum / ratingVotes : 0;
+  const ratingById = new Map();
+  for (const record of tokens.records.values()) {
+    const ratingCount = record.ratingCount ?? 0;
+    const averageRating = record.averageRating ?? corpusRatingMean;
+    ratingById.set(record.id, {
+      bayesianRating:
+        ratingVotes > 0
+          ? (ratingCount * averageRating + 20 * corpusRatingMean) /
+            (ratingCount + 20)
+          : 0,
+      ratingEvidence: Math.log1p(ratingCount) / Math.log1p(maxRatingCount),
+    });
+  }
+  const ratingStats = {
+    ratingVotes,
+    corpusRatingMean,
+    maxRatingCount,
+    ratingById,
+  };
+  return {
+    exact,
+    tokens,
+    fields,
+    trigrams,
+    ratingStats,
+    buildMs: roundedMs(startedAt),
+  };
 }
 
 export async function loadTitleSearchPipeline(corpusPath) {
@@ -360,6 +397,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
         genreFallbackQuery: genreTitleFallbackQuery,
         structuredGenreRanking:
           queryPlan?.routes.structuredGenreRanking === true,
+        ratingStats: pipeline.ratingStats,
       },
     );
     scoringMs = roundedMs(scoringStartedAt);
