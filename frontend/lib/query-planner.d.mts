@@ -100,6 +100,10 @@ export const ControlWordCandidateProvider: {
 export function buildPlannerIndexes(
   documents: Record<string, unknown>[],
   registry: Record<string, unknown>,
+  sharedIndexes?: {
+    exactTitles?: Record<string, unknown>;
+    titleTrigrams?: Record<string, unknown>;
+  },
 ): PlannerIndexes;
 export function loadPlannerIndexes(
   corpusPath: string,

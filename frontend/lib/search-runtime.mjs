@@ -1,8 +1,8 @@
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { loadPlannerIndexes } from "./query-planner.mjs";
+import { buildPlannerIndexes } from "./query-planner.mjs";
 import { RUNTIME_FILES, resolveRuntimeFile } from "./runtime-data.mjs";
-import { loadTitleSearchPipeline } from "./title-search-pipeline.mjs";
+import { buildTitleSearchPipeline } from "./title-search-pipeline.mjs";
 
 let runtimePromise;
 let runtimeSourceKey;
@@ -40,14 +40,24 @@ export async function getSearchRuntime() {
   if (!cached) {
     runtimeSourceKey = sourceKey;
     runtimePromise = Promise.all([
-      loadTitleSearchPipeline(corpusPath),
-      loadPlannerIndexes(corpusPath, registryPath),
-    ]).then(([searchIndexes, plannerIndexes]) => ({
-      searchIndexes,
-      plannerIndexes,
-      corpusPath,
-      registryPath,
-    }));
+      readFile(/* turbopackIgnore: true */ corpusPath, "utf8"),
+      readFile(/* turbopackIgnore: true */ registryPath, "utf8"),
+    ]).then(([corpusContents, registryContents]) => {
+      const documents = corpusContents
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((line) => JSON.parse(line));
+      const searchIndexes = buildTitleSearchPipeline(documents);
+      const plannerIndexes = buildPlannerIndexes(
+        documents,
+        JSON.parse(registryContents),
+        {
+          exactTitles: searchIndexes.exact,
+          titleTrigrams: searchIndexes.trigrams,
+        },
+      );
+      return { searchIndexes, plannerIndexes, corpusPath, registryPath };
+    });
   }
   const runtime = await runtimePromise;
   return { ...runtime, cached };

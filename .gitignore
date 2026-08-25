@@ -18,3 +18,7 @@ frontend/.env.local
 .next/
 .local/
 *.tmp
+
+.vercel/
+.env.local
+frontend/.vercel/

@@ -153,15 +153,17 @@ function buildPersonInitialIndex(people) {
   return byInitials;
 }
 
-export function buildPlannerIndexes(documents, registry) {
+export function buildPlannerIndexes(documents, registry, sharedIndexes = {}) {
   const startedAt = performance.now();
   if (!Array.isArray(documents) || !documents.length)
     throw new Error("Planner corpus must contain at least one movie.");
   if (!registry?.entities || !Array.isArray(registry.entities.people))
     throw new Error("Entity registry is missing people.");
   const people = registry.entities.people.map(normalizedPerson);
-  const exactTitles = buildExactTitleIndex(documents);
-  const titleTrigrams = buildCharacterTrigramIndex(documents);
+  const exactTitles =
+    sharedIndexes.exactTitles ?? buildExactTitleIndex(documents);
+  const titleTrigrams =
+    sharedIndexes.titleTrigrams ?? buildCharacterTrigramIndex(documents);
   const titleById = new Map(
     [...titleTrigrams.records].map(([id, record]) => [id, record]),
   );
