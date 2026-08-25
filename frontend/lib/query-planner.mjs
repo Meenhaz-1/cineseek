@@ -16,7 +16,7 @@ import {
 import { suggestPersonName } from "./person-name-suggestion.mjs";
 
 export const QUERY_PLANNER_ID = "deterministic";
-export const QUERY_PLANNER_VERSION = "1.1.0";
+export const QUERY_PLANNER_VERSION = "1.2.0";
 export const SEMANTIC_SYNONYMS = {
   dark: ["gritty", "crime", "thriller"],
   space: ["sci-fi", "black hole"],
@@ -153,6 +153,66 @@ function buildPersonInitialIndex(people) {
   return byInitials;
 }
 
+function displayTitlePhrase(phrase) {
+  const minorWords = new Set(["a", "an", "and", "of", "the", "to"]);
+  return tokens(phrase)
+    .map((token, index) =>
+      index > 0 && minorWords.has(token)
+        ? token
+        : `${token[0].toUpperCase()}${token.slice(1)}`,
+    )
+    .join(" ");
+}
+
+function buildRecurringTitlePhrases(titleAliasesById) {
+  const movieIdsByPhrase = new Map();
+  for (const [id, aliases] of titleAliasesById) {
+    for (const alias of aliases) {
+      const aliasTokens = tokens(alias);
+      while (
+        aliasTokens.length > 1 &&
+        ["a", "an", "the"].includes(aliasTokens[0])
+      )
+        aliasTokens.shift();
+      for (
+        let length = 2;
+        length <= Math.min(4, aliasTokens.length);
+        length++
+      ) {
+        const phrase = aliasTokens.slice(0, length).join(" ");
+        const movieIds = movieIdsByPhrase.get(phrase) ?? new Set();
+        movieIds.add(id);
+        movieIdsByPhrase.set(phrase, movieIds);
+      }
+    }
+  }
+  return [...movieIdsByPhrase]
+    .filter(([, movieIds]) => movieIds.size >= 2)
+    .map(([phrase, movieIds]) => ({
+      phrase,
+      display: displayTitlePhrase(phrase),
+      movieCount: movieIds.size,
+      phraseTokens: tokens(phrase),
+    }));
+}
+
+function recurringTitlePhraseShape(phraseTokens) {
+  return `${phraseTokens.length}:${phraseTokens
+    .map((token) => token[0])
+    .join("")}`;
+}
+
+function indexRecurringTitlePhrases(phrases) {
+  const byShape = new Map();
+  for (const phrase of phrases) {
+    const shape = recurringTitlePhraseShape(phrase.phraseTokens);
+    const matches = byShape.get(shape) ?? [];
+    matches.push(phrase);
+    byShape.set(shape, matches);
+  }
+  return byShape;
+}
+
 export function buildPlannerIndexes(documents, registry, sharedIndexes = {}) {
   const startedAt = performance.now();
   if (!Array.isArray(documents) || !documents.length)
@@ -193,6 +253,7 @@ export function buildPlannerIndexes(documents, registry, sharedIndexes = {}) {
       matches.push(id);
       normalizedTitles.set(alias, matches);
     }
+  const recurringTitlePhrases = buildRecurringTitlePhrases(titleAliasesById);
   const genres = [
     ...new Set([
       ...Object.values(GENRE_ALIASES),
@@ -206,6 +267,13 @@ export function buildPlannerIndexes(documents, registry, sharedIndexes = {}) {
     titleById,
     titleAliasesById,
     normalizedTitles,
+    recurringTitlePhrases,
+    recurringTitlePhraseSet: new Set(
+      recurringTitlePhrases.map(({ phrase }) => phrase),
+    ),
+    recurringTitlePhrasesByShape: indexRecurringTitlePhrases(
+      recurringTitlePhrases,
+    ),
     people,
     actors: people.filter(({ roles }) => roles.includes("actor")),
     directors: people.filter(({ roles }) => roles.includes("director")),
@@ -405,6 +473,57 @@ function titleTarget(query) {
     : null;
 }
 
+function recurringTitlePhraseCorrection(target, indexes) {
+  const targetTokens = tokens(target.text);
+  if (targetTokens.length < 2 || targetTokens.length > 4) return null;
+  const exactTarget = targetTokens.join(" ");
+  if (indexes.recurringTitlePhraseSet.has(exactTarget)) return null;
+  const phraseCandidates =
+    indexes.recurringTitlePhrasesByShape.get(
+      recurringTitlePhraseShape(targetTokens),
+    ) ?? [];
+  const candidates = phraseCandidates
+    .map((candidate) => {
+      const tokenDistances = targetTokens.map((token, index) =>
+        correctionDistance(token, candidate.phraseTokens[index]),
+      );
+      const distance = tokenDistances.reduce((sum, value) => sum + value, 0);
+      const maximumLength = Math.max(
+        target.text.length,
+        candidate.phrase.length,
+      );
+      return {
+        ...candidate,
+        tokenDistances,
+        distance,
+        similarity: maximumLength ? 1 - distance / maximumLength : 1,
+      };
+    })
+    .filter(
+      ({ tokenDistances, distance, similarity }) =>
+        distance > 0 &&
+        distance <= 2 &&
+        tokenDistances.every((value) => value <= 1) &&
+        similarity >= 0.8,
+    )
+    .sort(
+      (left, right) =>
+        left.distance - right.distance ||
+        right.movieCount - left.movieCount ||
+        left.phrase.localeCompare(right.phrase),
+    );
+  const [best, runnerUp] = candidates;
+  if (!best || (runnerUp && runnerUp.distance === best.distance)) return null;
+  return {
+    original: target.text,
+    replacement: best.display,
+    replacementText: best.phrase,
+    entityType: "title",
+    confidence: Number(best.similarity.toFixed(3)),
+    policy: "automatic",
+  };
+}
+
 function titleCorrection(query, indexes) {
   const target = titleTarget(query);
   if (
@@ -412,6 +531,11 @@ function titleCorrection(query, indexes) {
     indexes.normalizedTitles.has(normalizeForEditDistance(target.text))
   )
     return null;
+  const recurringPhraseCorrection = recurringTitlePhraseCorrection(
+    target,
+    indexes,
+  );
+  if (recurringPhraseCorrection) return recurringPhraseCorrection;
   const lookup = lookupCharacterTrigrams(
     indexes.titleTrigrams,
     target.text,

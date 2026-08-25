@@ -22,6 +22,16 @@ const documents = [
     title: "Horror Express",
     metadata: { year: 1972, genres: ["Horror"] },
   },
+  {
+    _id: "4",
+    title: "Harry Potter and the Sorcerer's Stone",
+    metadata: { year: 2001, genres: ["Adventure", "Fantasy"] },
+  },
+  {
+    _id: "5",
+    title: "Harry Potter and the Chamber of Secrets",
+    metadata: { year: 2002, genres: ["Adventure", "Fantasy"] },
+  },
 ];
 const registry = {
   stats: { movies: 3, people: 2, genres: 2, tags: 0 },
@@ -85,6 +95,20 @@ test("corrects a title with and without explicit title context", () => {
   const contextual = planQuery("movie called intersteler", indexes);
   assert.equal(contextual.corrections[0].entityType, "title");
   assert.equal(contextual.routes.titleQuery, "interstellar");
+});
+
+test("corrects a misspelled recurring franchise phrase", () => {
+  const plan = planQuery("hary poter", indexes);
+  assert.equal(plan.effectiveQuery, "harry potter");
+  assert.deepEqual(plan.corrections[0], {
+    original: "hary poter",
+    replacement: "Harry Potter",
+    entityType: "title",
+    confidence: 0.833,
+    policy: "automatic",
+  });
+  assert.equal(plan.routes.titleQuery, "harry potter");
+  assert.equal(planQuery("harry potter", indexes).corrections.length, 0);
 });
 
 test("corrects a genre only in genre context", () => {
