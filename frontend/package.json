@@ -33,6 +33,7 @@
     "workbook:parser-cases:verify": "node scripts/verify-query-parser-workbook.mjs"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.3.0",
     "next": "16.3.0",
     "openai": "^7.5.0",
