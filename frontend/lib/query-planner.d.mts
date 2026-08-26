@@ -117,7 +117,11 @@ export function loadPlannerIndexes(
   corpusPath: string,
   registryPath: string,
 ): Promise<PlannerIndexes>;
-export function planQuery(rawQuery: string, indexes: PlannerIndexes): QueryPlan;
+export function planQuery(
+  rawQuery: string,
+  indexes: PlannerIndexes,
+  options?: { autocorrect?: boolean },
+): QueryPlan;
 export const deterministicQueryPlanner: QueryPlanner;
 export function titleSearchInputFromPlan(
   plan: QueryPlan,

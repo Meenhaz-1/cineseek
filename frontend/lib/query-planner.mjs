@@ -689,10 +689,12 @@ function unsupportedConstraints(query) {
   return imdb ? [`IMDb rating >= ${imdb[1]}`] : [];
 }
 
-export function planQuery(rawQuery, indexes) {
+export function planQuery(rawQuery, indexes, options = {}) {
   const startedAt = performance.now();
   const raw = String(rawQuery ?? "");
-  const cachedPlan = indexes.planCache?.get(raw);
+  const autocorrect = options.autocorrect !== false;
+  const cacheKey = `${autocorrect ? "auto" : "literal"}:${raw}`;
+  const cachedPlan = indexes.planCache?.get(cacheKey);
   if (cachedPlan)
     return {
       ...cachedPlan,
@@ -747,11 +749,18 @@ export function planQuery(rawQuery, indexes) {
         : ["person", "title", "genre", "control"];
   const selected =
     candidates[priority.find((kind) => candidates[kind])] ?? null;
-  const effectiveQuery = applyCorrection(normalizedQuery, selected);
-  const corrections = [publicCorrection(selected)].filter(Boolean);
+  const activeCorrection =
+    selected?.policy === "automatic" && !autocorrect
+      ? { ...selected, policy: "suggest" }
+      : selected;
+  const effectiveQuery = applyCorrection(normalizedQuery, activeCorrection);
+  const corrections = [publicCorrection(activeCorrection)].filter(Boolean);
   const suggested =
-    selected?.policy === "suggest"
-      ? applyCorrection(normalizedQuery, { ...selected, policy: "automatic" })
+    activeCorrection?.policy === "suggest"
+      ? applyCorrection(normalizedQuery, {
+          ...activeCorrection,
+          policy: "automatic",
+        })
       : undefined;
 
   const people = exactPeople(effectiveQuery, indexes, preferredRole).map(
@@ -991,7 +1000,7 @@ export function planQuery(rawQuery, indexes) {
         indexes.people.length + indexes.genres.length + indexes.tags.length,
     },
   };
-  indexes.planCache?.set(raw, plan);
+  indexes.planCache?.set(cacheKey, plan);
   return plan;
 }
 

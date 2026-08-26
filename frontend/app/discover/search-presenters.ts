@@ -92,6 +92,18 @@ export function analysisFromPlan(
 
 export type QueryAnalysis = ReturnType<typeof analysisFromPlan>;
 
+export function correctedQueryLabel(
+  rawQuery: string,
+  correction: QueryPlan["corrections"][number],
+) {
+  const escaped = correction.original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const corrected = rawQuery.replace(
+    new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "i"),
+    (_, prefix: string) => `${prefix}${correction.replacement}`,
+  );
+  return corrected === rawQuery ? correction.replacement : corrected;
+}
+
 export function queryLabel(result: TitleRetrieval) {
   return result.retrievalQuery || result.normalizedQuery || "this query";
 }

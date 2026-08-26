@@ -20,6 +20,7 @@ export async function POST(request: Request) {
     weights?: unknown;
     genreWeights?: unknown;
     resultLimit?: unknown;
+    autocorrect?: unknown;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -48,6 +49,15 @@ export async function POST(request: Request) {
     ) {
       return Response.json(
         { error: "weights must be an object" },
+        { status: 400 },
+      );
+    }
+    if (
+      body.autocorrect !== undefined &&
+      typeof body.autocorrect !== "boolean"
+    ) {
+      return Response.json(
+        { error: "autocorrect must be a boolean" },
         { status: 400 },
       );
     }
@@ -87,7 +97,9 @@ export async function POST(request: Request) {
 
     const totalStartedAt = performance.now();
     const runtimeState = await getSearchRuntime();
-    const queryPlan = planQuery(body.query, runtimeState.plannerIndexes);
+    const queryPlan = planQuery(body.query, runtimeState.plannerIndexes, {
+      autocorrect: body.autocorrect !== false,
+    });
     const result = runTitleSearch(runtimeState.searchIndexes, queryPlan, {
       cacheStatus: runtimeState.cached ? "warm" : "built for this request",
       rankLimit: resultLimit,

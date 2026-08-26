@@ -1377,6 +1377,39 @@ footer > a:last-child {
 .didYouMean button:hover {
   color: #fff;
 }
+.automaticCorrection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-top: 12px;
+  padding-left: 11px;
+  border-left: 2px solid var(--lime);
+  color: #c7cdca;
+  font: 12px/1.5 var(--font-interface);
+}
+.automaticCorrection strong {
+  color: #fff;
+  font-weight: 750;
+}
+.automaticCorrection button {
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  color: var(--lime);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.automaticCorrection button:hover {
+  color: #fff;
+}
+.automaticCorrection button:focus-visible {
+  outline: 2px solid #f2ffad;
+  outline-offset: 3px;
+}
 
 /* Workbook-backed parser test console. */
 .parserTestWorkbench {

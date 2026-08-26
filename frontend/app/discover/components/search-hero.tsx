@@ -4,19 +4,28 @@ import { examples } from "../../data";
 
 export function SearchHero({
   input,
+  automaticCorrection,
   suggestedQuery,
+  suggestedQueryLabel,
   heroSearchRef,
   onInputChange,
   onSubmit,
   onAcceptSuggestion,
+  onSearchOriginal,
   onRunExample,
 }: {
   input: string;
+  automaticCorrection?: {
+    correctedQuery: string;
+    originalQuery: string;
+  };
   suggestedQuery?: string;
+  suggestedQueryLabel?: string;
   heroSearchRef: RefObject<HTMLFormElement | null>;
   onInputChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
   onAcceptSuggestion: () => void;
+  onSearchOriginal: () => void;
   onRunExample: (example: string) => void;
 }) {
   return (
@@ -53,15 +62,25 @@ export function SearchHero({
             Search <span aria-hidden="true">→</span>
           </button>
         </form>
-        {suggestedQuery && (
+        {automaticCorrection ? (
+          <div className="automaticCorrection" role="status" aria-live="polite">
+            <span>
+              Showing results for{" "}
+              <strong>{automaticCorrection.correctedQuery}</strong>
+            </span>
+            <button type="button" onClick={onSearchOriginal}>
+              Search instead for {automaticCorrection.originalQuery}
+            </button>
+          </div>
+        ) : suggestedQuery ? (
           <div className="didYouMean" role="status">
             <span>Did you mean</span>
             <button type="button" onClick={onAcceptSuggestion}>
-              {suggestedQuery}
+              {suggestedQueryLabel ?? suggestedQuery}
             </button>
             <span>?</span>
           </div>
-        )}
+        ) : null}
         <div className="examples">
           <span>Try</span>
           {examples.map((item) => (

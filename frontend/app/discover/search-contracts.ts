@@ -366,6 +366,7 @@ export type TitleRetrieval = {
 export type TitleRetrievalState = {
   status: "idle" | "ready" | "error";
   query?: string;
+  autocorrect?: boolean;
   result?: TitleRetrieval;
   plan?: QueryPlan;
   error?: string;

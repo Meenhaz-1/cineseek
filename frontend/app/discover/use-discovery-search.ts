@@ -21,13 +21,18 @@ import type {
   TitleRetrieval,
   TitleRetrievalState,
 } from "./search-contracts";
-import { analysisFromPlan, fullResultMovie } from "./search-presenters";
+import {
+  analysisFromPlan,
+  correctedQueryLabel,
+  fullResultMovie,
+} from "./search-presenters";
 
 export function useDiscoverySearch() {
   const portfolioMode =
     process.env.NEXT_PUBLIC_CINESEEK_DEPLOYMENT_MODE === "portfolio";
   const [input, setInput] = useState("");
   const [query, setQuery] = useState(DEFAULT_EXAMPLE_QUERY);
+  const [autocorrect, setAutocorrect] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const mode: Mode = "hybrid";
   const [selected, setSelected] = useState<Movie | null>(null);
@@ -51,8 +56,11 @@ export function useDiscoverySearch() {
   const resultsSummaryRef = useRef<HTMLDivElement>(null);
   const focusResultsAfterLoad = useRef(false);
 
+  const retrievalIsCurrent =
+    titleRetrieval.query === query &&
+    titleRetrieval.autocorrect === autocorrect;
   const activePlan =
-    titleRetrieval.status === "ready" && titleRetrieval.query === query
+    titleRetrieval.status === "ready" && retrievalIsCurrent
       ? titleRetrieval.plan
       : undefined;
   const analysis = useMemo(
@@ -60,12 +68,24 @@ export function useDiscoverySearch() {
     [activePlan, query],
   );
   const suggestedQuery = activePlan?.suggestedQuery;
+  const activeCorrection = activePlan?.corrections[0];
+  const automaticCorrection =
+    activeCorrection?.policy === "automatic"
+      ? {
+          correctedQuery: correctedQueryLabel(query, activeCorrection),
+          originalQuery: query,
+        }
+      : undefined;
+  const suggestedQueryLabel =
+    suggestedQuery && activeCorrection
+      ? correctedQueryLabel(query, activeCorrection)
+      : suggestedQuery;
   const rankerWeightTotal = Object.values(rankerWeights).reduce(
     (sum, weight) => sum + weight,
     0,
   );
   const responseCombinedScoring =
-    titleRetrieval.status === "ready"
+    titleRetrieval.status === "ready" && retrievalIsCurrent
       ? titleRetrieval.result?.combinedScoring
       : undefined;
   const responseGenreWeights: GenreWeights | null =
@@ -77,14 +97,14 @@ export function useDiscoverySearch() {
     ? Object.values(activeGenreWeights).reduce((sum, weight) => sum + weight, 0)
     : 0;
   const titleRetrievalLoading =
-    titleRetrieval.status === "idle" || titleRetrieval.query !== query;
+    titleRetrieval.status === "idle" || !retrievalIsCurrent;
   const displayedResults = useMemo(
     () =>
-      titleRetrieval.status === "ready" && titleRetrieval.query === query
+      titleRetrieval.status === "ready" && retrievalIsCurrent
         ? (titleRetrieval.result?.searchResults.items.map(fullResultMovie) ??
           [])
         : [],
-    [query, titleRetrieval],
+    [retrievalIsCurrent, titleRetrieval],
   );
   const inferred = analysis.semanticExpansions
     .flatMap(({ values }) => values)
@@ -114,7 +134,7 @@ export function useDiscoverySearch() {
     if (
       !focusResultsAfterLoad.current ||
       titleRetrieval.status !== "ready" ||
-      titleRetrieval.query !== query
+      !retrievalIsCurrent
     )
       return;
     focusResultsAfterLoad.current = false;
@@ -127,7 +147,7 @@ export function useDiscoverySearch() {
         : "smooth",
       block: "start",
     });
-  }, [query, titleRetrieval]);
+  }, [query, retrievalIsCurrent, titleRetrieval]);
 
   useEffect(() => {
     if (!activePlan || portfolioMode) return;
@@ -174,6 +194,7 @@ export function useDiscoverySearch() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query,
+        autocorrect,
         weights: rankerWeights,
         genreWeights: genreWeightOverrides ?? undefined,
         resultLimit,
@@ -192,6 +213,7 @@ export function useDiscoverySearch() {
         setTitleRetrieval({
           status: "ready",
           query,
+          autocorrect,
           plan: payload.queryPlan,
           result: payload.retrieval,
         });
@@ -203,12 +225,13 @@ export function useDiscoverySearch() {
         setTitleRetrieval({
           status: "error",
           query,
+          autocorrect,
           error: error instanceof Error ? error.message : "Search failed.",
         });
         setCombinedUpdating(false);
       });
     return () => controller.abort();
-  }, [query, rankerWeights, genreWeightOverrides, resultLimit]);
+  }, [query, autocorrect, rankerWeights, genreWeightOverrides, resultLimit]);
 
   function updateRankerWeight(key: CombinedWeightKey, value: number) {
     setCombinedUpdating(true);
@@ -243,6 +266,7 @@ export function useDiscoverySearch() {
     setCoach({ status: "loading" });
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
+    setAutocorrect(true);
     if (nextQuery === query) setCoachRequest((value) => value + 1);
     else setQuery(nextQuery);
   }
@@ -268,8 +292,19 @@ export function useDiscoverySearch() {
 
   function acceptSuggestion() {
     if (!suggestedQuery) return;
-    setInput(suggestedQuery);
-    chooseQuery(suggestedQuery, true);
+    const nextQuery = suggestedQueryLabel ?? suggestedQuery;
+    setInput(nextQuery);
+    chooseQuery(nextQuery, true);
+  }
+
+  function searchOriginalQuery() {
+    setHasSearched(true);
+    focusResultsAfterLoad.current = true;
+    setCoach({ status: "loading" });
+    setCombinedUpdating(true);
+    setResultLimit(RESULT_PAGE_SIZE);
+    setGenreWeightOverrides(null);
+    setAutocorrect(false);
   }
 
   async function runParserTests() {
@@ -300,6 +335,7 @@ export function useDiscoverySearch() {
 
   return {
     acceptSuggestion,
+    automaticCorrection,
     activeGenreWeights,
     activePlan,
     analysis,
@@ -320,11 +356,13 @@ export function useDiscoverySearch() {
     rankerWeightTotal,
     resetGenreWeights,
     resetRankerWeights,
+    retrievalIsCurrent,
     responseCombinedScoring,
     resultLimit,
     resultsSummaryRef,
     runExample,
     runParserTests,
+    searchOriginalQuery,
     selected,
     setInput,
     setSelected,
@@ -333,6 +371,7 @@ export function useDiscoverySearch() {
     submit,
     submitSticky,
     suggestedQuery,
+    suggestedQueryLabel,
     titleRetrieval,
     titleRetrievalLoading,
     updateGenreWeight,

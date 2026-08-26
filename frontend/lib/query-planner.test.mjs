@@ -121,6 +121,40 @@ test("corrects a title with and without explicit title context", () => {
   assert.equal(contextual.routes.titleQuery, "interstellar");
 });
 
+test("can expose an automatic correction as a suggestion for literal search", () => {
+  const corrected = planQuery("intersteler", indexes);
+  const literal = planQuery("intersteler", indexes, { autocorrect: false });
+
+  assert.equal(corrected.effectiveQuery, "interstellar");
+  assert.equal(corrected.corrections[0].policy, "automatic");
+  assert.equal(literal.effectiveQuery, "intersteler");
+  assert.equal(literal.corrections[0].policy, "suggest");
+  assert.equal(literal.suggestedQuery, "interstellar");
+  assert.equal(literal.routes.titleQuery, "intersteler");
+});
+
+test("caches corrected and literal plans separately", () => {
+  const corrected = planQuery("tom cuise", indexes);
+  const literal = planQuery("tom cuise", indexes, { autocorrect: false });
+
+  assert.equal(corrected.effectiveQuery, "tom cruise");
+  assert.equal(literal.effectiveQuery, "tom cuise");
+  assert.equal(literal.corrections[0].policy, "suggest");
+});
+
+test("literal mode downgrades automatic genre and control corrections", () => {
+  for (const [query, entityType] of [
+    ["horrer movies", "genre"],
+    ["lates movies", "control"],
+  ]) {
+    const literal = planQuery(query, indexes, { autocorrect: false });
+    assert.equal(literal.effectiveQuery, query);
+    assert.equal(literal.corrections[0].entityType, entityType);
+    assert.equal(literal.corrections[0].policy, "suggest");
+    assert.ok(literal.suggestedQuery);
+  }
+});
+
 test("corrects a misspelled recurring franchise phrase", () => {
   const plan = planQuery("hary poter", indexes);
   assert.equal(plan.effectiveQuery, "harry potter");

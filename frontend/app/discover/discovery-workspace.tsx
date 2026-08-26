@@ -37,6 +37,7 @@ import { useDiscoverySearch } from "./use-discovery-search";
 export function DiscoveryWorkspace() {
   const {
     acceptSuggestion,
+    automaticCorrection,
     activeGenreWeights,
     activePlan,
     analysis,
@@ -57,9 +58,11 @@ export function DiscoveryWorkspace() {
     rankerWeightTotal,
     resetGenreWeights,
     resetRankerWeights,
+    retrievalIsCurrent,
     resultsSummaryRef,
     runExample,
     runParserTests,
+    searchOriginalQuery,
     selected,
     setInput,
     setSelected,
@@ -68,6 +71,7 @@ export function DiscoveryWorkspace() {
     submit,
     submitSticky,
     suggestedQuery,
+    suggestedQueryLabel,
     titleRetrieval,
     titleRetrievalLoading,
     updateGenreWeight,
@@ -79,11 +83,14 @@ export function DiscoveryWorkspace() {
 
       <SearchHero
         input={input}
+        automaticCorrection={automaticCorrection}
         suggestedQuery={suggestedQuery}
+        suggestedQueryLabel={suggestedQueryLabel}
         heroSearchRef={heroSearchRef}
         onInputChange={setInput}
         onSubmit={submit}
         onAcceptSuggestion={acceptSuggestion}
+        onSearchOriginal={searchOriginalQuery}
         onRunExample={runExample}
       />
 
@@ -148,7 +155,7 @@ export function DiscoveryWorkspace() {
         </div>
         {hasSearched &&
           titleRetrieval.status === "ready" &&
-          titleRetrieval.query === query && (
+          retrievalIsCurrent && (
             <p className="srOnly" role="status" aria-live="polite">
               Showing {titleRetrieval.result?.searchResults.shown ?? 0} of{" "}
               {titleRetrieval.result?.searchResults.total.toLocaleString() ?? 0}{" "}
