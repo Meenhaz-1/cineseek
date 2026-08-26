@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { parseMetadataQuery } from "./metadata-query.mjs";
 import { exactTitleKey } from "./exact-title-index.mjs";
 import { queryTitleTokens } from "./title-token-index.mjs";
+import { MIN_RATING_COUNT_FOR_AVERAGE } from "./combined-title-ranker.mjs";
 
 export const GENRE_QUERY_IDS = Array.from(
   { length: 10 },
@@ -53,9 +54,17 @@ function movieMatchesGenres(record, genres, mode = "all") {
 
 function qualityContext(records) {
   const values = [...records.values()];
-  const votes = values.reduce((sum, record) => sum + record.ratingCount, 0);
+  const eligibleValues = values.filter(
+    (record) =>
+      record.ratingCount >= MIN_RATING_COUNT_FOR_AVERAGE &&
+      Number.isFinite(record.averageRating),
+  );
+  const votes = eligibleValues.reduce(
+    (sum, record) => sum + record.ratingCount,
+    0,
+  );
   const mean = votes
-    ? values.reduce(
+    ? eligibleValues.reduce(
         (sum, record) => sum + (record.averageRating ?? 0) * record.ratingCount,
         0,
       ) / votes
@@ -71,9 +80,11 @@ function qualityScore(record, requestedGenres, context) {
   const focus =
     matched / Math.max(requestedGenres.length, record.genres.length, 1);
   const bayesian =
-    (record.ratingCount * (record.averageRating ?? context.mean) +
-      20 * context.mean) /
-    (record.ratingCount + 20);
+    record.ratingCount >= MIN_RATING_COUNT_FOR_AVERAGE &&
+    Number.isFinite(record.averageRating)
+      ? (record.ratingCount * record.averageRating + 20 * context.mean) /
+        (record.ratingCount + 20)
+      : 0;
   const evidence =
     Math.log1p(record.ratingCount) / Math.log1p(context.maxCount);
   return round(focus * 0.55 + (bayesian / 5) * 0.3 + evidence * 0.15);

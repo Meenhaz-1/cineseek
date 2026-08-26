@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEFAULT_COMBINED_WEIGHTS,
+  MIN_RATING_COUNT_FOR_AVERAGE,
   SINGLE_GENRE_DISCOVERY_WEIGHTS,
   scoreCombinedTitleCandidates,
   validateCombinedWeights,
@@ -209,6 +210,103 @@ test("single-genre discovery keeps low-evidence titles but ranks supported quali
     result.candidatesPreview[0].structuredGenreContributions.ratingEvidence >
       result.candidatesPreview[1].structuredGenreContributions.ratingEvidence,
   );
+});
+
+test("average rating influences ranking only from five ratings onward", () => {
+  assert.equal(MIN_RATING_COUNT_FOR_AVERAGE, 5);
+  const genreRecords = new Map([
+    [
+      "low-average",
+      {
+        id: "low-average",
+        title: "A Low Average",
+        genres: ["Comedy"],
+        averageRating: 1,
+        ratingCount: 4,
+      },
+    ],
+    [
+      "high-average",
+      {
+        id: "high-average",
+        title: "Z High Average",
+        genres: ["Comedy"],
+        averageRating: 5,
+        ratingCount: 4,
+      },
+    ],
+    [
+      "eligible",
+      {
+        id: "eligible",
+        title: "Eligible Average",
+        genres: ["Comedy"],
+        averageRating: 4,
+        ratingCount: 5,
+      },
+    ],
+  ]);
+  const result = scoreCombinedTitleCandidates(
+    genreRecords,
+    [...genreRecords.keys()],
+    "",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    { genres: ["Comedy"], structuredGenreRanking: true },
+  );
+  const low = result.candidatesPreview.find(({ id }) => id === "low-average");
+  const high = result.candidatesPreview.find(({ id }) => id === "high-average");
+  const eligible = result.candidatesPreview.find(({ id }) => id === "eligible");
+
+  assert.equal(low.averageRatingEligible, false);
+  assert.equal(high.averageRatingEligible, false);
+  assert.equal(low.structuredGenreContributions.bayesianRating, 0);
+  assert.equal(high.structuredGenreContributions.bayesianRating, 0);
+  assert.equal(low.structuredGenreScore, high.structuredGenreScore);
+  assert.equal(eligible.averageRatingEligible, true);
+  assert.ok(eligible.structuredGenreContributions.bayesianRating > 0);
+});
+
+test("the general-search average-rating tie-breaker uses the same threshold", () => {
+  const tiedRecords = new Map([
+    [
+      "low-average",
+      {
+        id: "low-average",
+        title: "Same Title",
+        genres: [],
+        averageRating: 1,
+        ratingCount: 4,
+      },
+    ],
+    [
+      "high-average",
+      {
+        id: "high-average",
+        title: "Same Title",
+        genres: [],
+        averageRating: 5,
+        ratingCount: 4,
+      },
+    ],
+  ]);
+  const belowThreshold = scoreCombinedTitleCandidates(
+    tiedRecords,
+    [...tiedRecords.keys()],
+    "same title",
+    DEFAULT_COMBINED_WEIGHTS,
+  );
+  assert.equal(belowThreshold.candidatesPreview[0].id, "low-average");
+
+  tiedRecords.get("low-average").ratingCount = 5;
+  tiedRecords.get("high-average").ratingCount = 5;
+  const eligible = scoreCombinedTitleCandidates(
+    tiedRecords,
+    [...tiedRecords.keys()],
+    "same title",
+    DEFAULT_COMBINED_WEIGHTS,
+  );
+  assert.equal(eligible.candidatesPreview[0].id, "high-average");
 });
 
 test("custom single-genre weights alter the active profile deterministically", () => {

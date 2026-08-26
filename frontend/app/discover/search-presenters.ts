@@ -191,7 +191,10 @@ export function combinedTakeaway(result: TitleRetrieval) {
   if (!top)
     return `CineSeek could not create a final score because there were no possible movies to rank.`;
   if (result.combinedScoring.rankingContext.structuredGenreDiscovery) {
-    return `${top.title} ranks first by combining genre match, rating quality, and rating count. Its technical final score is ${top.structuredGenreScore.toFixed(3)}.`;
+    const qualitySummary = top.averageRatingEligible
+      ? "rating quality and rating count"
+      : `rating count; its average rating was not used because it has fewer than ${result.combinedScoring.rankingContext.minimumAverageRatingCount} ratings`;
+    return `${top.title} ranks first by combining genre match with ${qualitySummary}. Its technical final score is ${top.structuredGenreScore.toFixed(3)}.`;
   }
   if (top.personPopularityBoost) {
     const boost = top.personPopularityBoost;

@@ -43,6 +43,7 @@ export const COMPOUND_GENRE_DISCOVERY_WEIGHTS = {
 };
 
 export const BAYESIAN_RATING_PRIOR = 20;
+export const MIN_RATING_COUNT_FOR_AVERAGE = 5;
 export const PERSON_POPULARITY_WEIGHT = 0.06;
 
 function validateRelativeWeights(input, defaults, keys, label) {
@@ -170,9 +171,14 @@ export function scoreCombinedTitleCandidates(
   if (isStructuredGenreDiscovery && !cachedRatingStats) {
     for (const record of records.values()) {
       const ratingCount = record.ratingCount ?? 0;
-      ratingVotes += ratingCount;
-      weightedRatingSum += (record.averageRating ?? 0) * ratingCount;
       maxRatingCount = Math.max(maxRatingCount, ratingCount);
+      if (
+        ratingCount >= MIN_RATING_COUNT_FOR_AVERAGE &&
+        Number.isFinite(record.averageRating)
+      ) {
+        ratingVotes += ratingCount;
+        weightedRatingSum += record.averageRating * ratingCount;
+      }
     }
   }
   const corpusRatingMean = cachedRatingStats
@@ -230,15 +236,21 @@ export function scoreCombinedTitleCandidates(
             Math.max(requestedGenres.length, record.genres?.length ?? 0, 1)
           : 0;
       const ratingCount = record.ratingCount ?? 0;
-      const averageRating = record.averageRating ?? corpusRatingMean;
       const cachedRating = cachedRatingStats?.ratingById.get(record.id);
-      const bayesianRating = cachedRating
-        ? cachedRating.bayesianRating
-        : ratingVotes > 0
-          ? (ratingCount * averageRating +
-              BAYESIAN_RATING_PRIOR * corpusRatingMean) /
-            (ratingCount + BAYESIAN_RATING_PRIOR)
-          : 0;
+      const averageRatingEligible =
+        cachedRating?.averageRatingEligible ??
+        (ratingCount >= MIN_RATING_COUNT_FOR_AVERAGE &&
+          Number.isFinite(record.averageRating));
+      const averageRating = record.averageRating ?? corpusRatingMean;
+      const bayesianRating = !averageRatingEligible
+        ? 0
+        : cachedRating
+          ? cachedRating.bayesianRating
+          : ratingVotes > 0
+            ? (ratingCount * averageRating +
+                BAYESIAN_RATING_PRIOR * corpusRatingMean) /
+              (ratingCount + BAYESIAN_RATING_PRIOR)
+            : 0;
       const ratingEvidence = cachedRating
         ? cachedRating.ratingEvidence
         : Math.log1p(ratingCount) / Math.log1p(maxRatingCount);
@@ -279,6 +291,7 @@ export function scoreCombinedTitleCandidates(
         combinedScore,
         metadataGenreMatchCount,
         genreFocus,
+        averageRatingEligible,
         bayesianRating: Number(bayesianRating.toFixed(3)),
         ratingEvidence: Number(ratingEvidence.toFixed(6)),
         structuredGenreSignals,
@@ -304,12 +317,18 @@ export function scoreCombinedTitleCandidates(
       ) {
         return right.structuredGenreScore - left.structuredGenreScore;
       }
+      const leftRankingAverage = left.averageRatingEligible
+        ? (left.averageRating ?? 0)
+        : 0;
+      const rightRankingAverage = right.averageRatingEligible
+        ? (right.averageRating ?? 0)
+        : 0;
       return (
         right.combinedScore - left.combinedScore ||
         right.signals.orderedCoverage - left.signals.orderedCoverage ||
         right.signals.tokenCoverage - left.signals.tokenCoverage ||
         right.signals.dice - left.signals.dice ||
-        (right.averageRating ?? 0) - (left.averageRating ?? 0) ||
+        rightRankingAverage - leftRankingAverage ||
         (right.ratingCount ?? 0) - (left.ratingCount ?? 0) ||
         left.title.localeCompare(right.title)
       );
@@ -409,6 +428,7 @@ export function scoreCombinedTitleCandidates(
         ? genreWeightProfile.totalWeight
         : null,
       bayesianPrior: BAYESIAN_RATING_PRIOR,
+      minimumAverageRatingCount: MIN_RATING_COUNT_FOR_AVERAGE,
       personPopularityWeight: PERSON_POPULARITY_WEIGHT,
       personPopularityApplied: maximumPersonMovieCount > 0,
     },

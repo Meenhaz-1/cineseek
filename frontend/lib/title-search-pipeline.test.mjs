@@ -63,6 +63,54 @@ const documents = [
   },
 ];
 
+test("cached rating quality ignores movies with fewer than five ratings", () => {
+  const pipeline = buildTitleSearchPipeline([
+    {
+      _id: "low-count-high",
+      title: "Low Count High",
+      metadata: {
+        genres: ["Comedy"],
+        average_rating: 5,
+        rating_count: 4,
+      },
+    },
+    {
+      _id: "low-count-low",
+      title: "Low Count Low",
+      metadata: {
+        genres: ["Comedy"],
+        average_rating: 1,
+        rating_count: 4,
+      },
+    },
+    {
+      _id: "eligible",
+      title: "Eligible",
+      metadata: {
+        genres: ["Comedy"],
+        average_rating: 3,
+        rating_count: 5,
+      },
+    },
+  ]);
+
+  assert.equal(pipeline.ratingStats.corpusRatingMean, 3);
+  assert.deepEqual(pipeline.ratingStats.ratingById.get("low-count-high"), {
+    averageRatingEligible: false,
+    bayesianRating: 0,
+    ratingEvidence:
+      Math.log1p(4) / Math.log1p(pipeline.ratingStats.maxRatingCount),
+  });
+  assert.equal(
+    pipeline.ratingStats.ratingById.get("low-count-low").bayesianRating,
+    0,
+  );
+  assert.equal(
+    pipeline.ratingStats.ratingById.get("eligible").averageRatingEligible,
+    true,
+  );
+});
+
 test("public diagnostics omit heavyweight enriched fields", () => {
   const pipeline = buildTitleSearchPipeline(documents);
   const result = runTitleSearch(pipeline, {

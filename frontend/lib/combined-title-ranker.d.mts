@@ -31,6 +31,7 @@ export type CombinedTitleCandidate = TitleTokenRecord & {
   combinedScore: number;
   metadataGenreMatchCount: number;
   genreFocus: number;
+  averageRatingEligible: boolean;
   bayesianRating: number;
   ratingEvidence: number;
   structuredGenreSignals: GenreWeights;
@@ -47,6 +48,7 @@ export const GENRE_WEIGHT_KEYS: GenreWeightKey[];
 export const SINGLE_GENRE_DISCOVERY_WEIGHTS: GenreWeights;
 export const COMPOUND_GENRE_DISCOVERY_WEIGHTS: GenreWeights;
 export const BAYESIAN_RATING_PRIOR: number;
+export const MIN_RATING_COUNT_FOR_AVERAGE: number;
 export const PERSON_POPULARITY_WEIGHT: number;
 export function validateCombinedWeights(input?: Partial<CombinedWeights>): {
   weights: CombinedWeights;
@@ -87,7 +89,11 @@ export function scoreCombinedTitleCandidates(
       maxRatingCount: number;
       ratingById: Map<
         string,
-        { bayesianRating: number; ratingEvidence: number }
+        {
+          averageRatingEligible: boolean;
+          bayesianRating: number;
+          ratingEvidence: number;
+        }
       >;
     };
     personCandidates?: {
@@ -120,6 +126,7 @@ export function scoreCombinedTitleCandidates(
     structuredGenreWeights: GenreWeights | null;
     structuredGenreWeightTotal: number | null;
     bayesianPrior: number;
+    minimumAverageRatingCount: number;
     personPopularityWeight: number;
     personPopularityApplied: boolean;
   };

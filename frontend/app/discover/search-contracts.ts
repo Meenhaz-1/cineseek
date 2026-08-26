@@ -318,6 +318,7 @@ export type TitleRetrieval = {
           } | null;
           structuredGenreWeightTotal: number | null;
           bayesianPrior: number;
+          minimumAverageRatingCount: number;
           personPopularityWeight: number;
           personPopularityApplied: boolean;
         };
@@ -335,6 +336,7 @@ export type TitleRetrieval = {
           combinedScore: number;
           metadataGenreMatchCount: number;
           genreFocus: number;
+          averageRatingEligible: boolean;
           bayesianRating: number;
           ratingEvidence: number;
           structuredGenreSignals: GenreWeights;

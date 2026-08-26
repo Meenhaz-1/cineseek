@@ -21,6 +21,7 @@ import { scoreTokenCoverageCandidates } from "./token-coverage.mjs";
 import { scoreOrderedTokenProximityCandidates } from "./ordered-token-proximity.mjs";
 import {
   BAYESIAN_RATING_PRIOR,
+  MIN_RATING_COUNT_FOR_AVERAGE,
   scoreCombinedTitleCandidates,
 } from "./combined-title-ranker.mjs";
 
@@ -38,9 +39,14 @@ export function buildTitleSearchPipeline(documents) {
   let maxRatingCount = 1;
   for (const record of tokens.records.values()) {
     const ratingCount = record.ratingCount ?? 0;
-    ratingVotes += ratingCount;
-    weightedRatingSum += (record.averageRating ?? 0) * ratingCount;
     maxRatingCount = Math.max(maxRatingCount, ratingCount);
+    if (
+      ratingCount >= MIN_RATING_COUNT_FOR_AVERAGE &&
+      Number.isFinite(record.averageRating)
+    ) {
+      ratingVotes += ratingCount;
+      weightedRatingSum += record.averageRating * ratingCount;
+    }
   }
   const corpusRatingMean =
     ratingVotes > 0 ? weightedRatingSum / ratingVotes : 0;
@@ -48,9 +54,13 @@ export function buildTitleSearchPipeline(documents) {
   for (const record of tokens.records.values()) {
     const ratingCount = record.ratingCount ?? 0;
     const averageRating = record.averageRating ?? corpusRatingMean;
+    const averageRatingEligible =
+      ratingCount >= MIN_RATING_COUNT_FOR_AVERAGE &&
+      Number.isFinite(record.averageRating);
     ratingById.set(record.id, {
+      averageRatingEligible,
       bayesianRating:
-        ratingVotes > 0
+        averageRatingEligible && ratingVotes > 0
           ? (ratingCount * averageRating +
               BAYESIAN_RATING_PRIOR * corpusRatingMean) /
             (ratingCount + BAYESIAN_RATING_PRIOR)

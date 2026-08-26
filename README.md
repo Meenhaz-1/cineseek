@@ -78,9 +78,10 @@ Dracula` can retain title evidence plus a lower-priority genre fallback.
 **Metadata constraints are not title words.** A year range or rating-count
 constraint filters candidates instead of improving lexical similarity.
 
-**Rating is evidence, not truth.** Bayesian rating and rating count can improve
-genre discovery, but they cannot define relevance judgments. Human grades
-remain authoritative.
+**Rating is evidence, not truth.** A movie needs at least five ratings before
+its average rating can influence ranking. Eligible averages use Bayesian
+adjustment, while rating count remains separate evidence. Human grades remain
+authoritative.
 
 **The benchmark is provisional.** Generated qrels are useful regression guards,
 not complete ground truth. The review workflow exists precisely because a

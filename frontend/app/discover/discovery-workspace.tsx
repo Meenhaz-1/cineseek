@@ -2052,7 +2052,14 @@ export function DiscoveryWorkspace() {
                                   <span>Relative-weight total</span>
                                   <strong>{genreWeightTotal}</strong>
                                   <p>
-                                    Bayesian ratings use a{" "}
+                                    Average rating contributes only after a
+                                    movie has at least{" "}
+                                    {
+                                      titleRetrieval.result.combinedScoring
+                                        .rankingContext
+                                        .minimumAverageRatingCount
+                                    }{" "}
+                                    ratings. Eligible movies then use a{" "}
                                     {
                                       titleRetrieval.result.combinedScoring
                                         .rankingContext.bayesianPrior
@@ -2180,10 +2187,10 @@ export function DiscoveryWorkspace() {
                                         <span>
                                           <i>Bayesian rating</i>
                                           <b>
-                                            {candidate.bayesianRating.toFixed(
-                                              2,
-                                            )}
-                                            /5 · +
+                                            {candidate.averageRatingEligible
+                                              ? `${candidate.bayesianRating.toFixed(2)}/5`
+                                              : "Not used (<5 ratings)"}
+                                            {" · +"}
                                             {candidate.structuredGenreContributions.bayesianRating.toFixed(
                                               3,
                                             )}
