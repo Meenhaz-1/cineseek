@@ -69,7 +69,8 @@ export function SearchHero({
               <strong>{automaticCorrection.correctedQuery}</strong>
             </span>
             <button type="button" onClick={onSearchOriginal}>
-              Search instead for {automaticCorrection.originalQuery}
+              <span>Search instead for:</span>
+              <strong>“{automaticCorrection.originalQuery}”</strong>
             </button>
           </div>
         ) : suggestedQuery ? (

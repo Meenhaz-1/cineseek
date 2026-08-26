@@ -1393,17 +1393,28 @@ footer > a:last-child {
   font-weight: 750;
 }
 .automaticCorrection button {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
   border: 0;
   background: transparent;
   padding: 2px 0;
-  color: var(--lime);
+  color: #a9adaa;
   font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 500;
   cursor: pointer;
 }
 .automaticCorrection button:hover {
+  color: #d9deda;
+}
+.automaticCorrection button strong {
+  color: var(--lime);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.automaticCorrection button:hover strong {
   color: #fff;
 }
 .automaticCorrection button:focus-visible {
