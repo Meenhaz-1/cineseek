@@ -1,0 +1,62 @@
+name: Evaluation metrics
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evaluation-metrics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    name: Movie search benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Prepare the public benchmark data
+        working-directory: frontend
+        run: npm run setup
+
+      - name: Evaluate the production search pipeline
+        run: >-
+          python -m cineseek evaluate data/movielens
+          outputs/query-planner-migration/unified-planner.run.jsonl
+          --corpus data/movielens/corpus.enriched.jsonl
+          --queries benchmark/queries.provisional.jsonl
+          --qrels benchmark/qrels/provisional.tsv
+          --k 10
+          --recall-k 100
+          --output outputs/post-merge-evaluation/report.json
+
+      - name: Publish metrics to the workflow summary
+        run: >-
+          node frontend/scripts/write-evaluation-summary.mjs
+          outputs/post-merge-evaluation/report.json
+
+      - name: Retain the benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: evaluation-metrics-${{ github.sha }}
+          path: |
+            outputs/query-planner-migration/unified-planner.run.jsonl
+            outputs/post-merge-evaluation/report.json
+          if-no-files-found: error
+          retention-days: 30

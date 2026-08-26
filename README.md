@@ -155,6 +155,7 @@ Run these from `frontend/` unless noted otherwise.
 | `npm run test:tmdb` | Run enrichment and poster-path tests using source-owned fixtures |
 | `npm run workbook:parser-cases:verify` | Verify parser workbook cases against the production planner |
 | `npm run benchmark:title` | Run the 80-query production pipeline benchmark |
+| `npm run benchmark:actions-summary -- <report.json>` | Render an evaluator report as a GitHub Actions summary |
 | `npm run benchmark:generic-genre` | Build the focused, unjudged `comedy` ranking pool and evidence report |
 | `npm run benchmark:summary` | Regenerate the UI benchmark summary from an evaluator report |
 | `npm run lint` | Run ESLint |
@@ -162,6 +163,11 @@ Run these from `frontend/` unless noted otherwise.
 | `npm run build` | Create the production Next.js build |
 | `npm run scan:secrets` | Scan public source files for common credential patterns |
 | `python -m pytest` | Run Python corpus and evaluator tests from the repository root |
+
+The `Evaluation metrics` GitHub Actions workflow rebuilds the public-data search
+pipeline after every push to `main`, publishes the provisional relevance and
+latency metrics in the run summary, and retains the full run and report for 30
+days. It can also be started manually from the Actions tab.
 
 ## Vercel deployment
 

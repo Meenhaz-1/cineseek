@@ -31,7 +31,7 @@ export function StickySearch({
         id="sticky-movie-search"
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
-        placeholder="Search the MovieLens teaching sample"
+        placeholder="Search movies, people, or genres"
       />
       <span className="stickySearchMode" aria-hidden="true">
         {mode}
