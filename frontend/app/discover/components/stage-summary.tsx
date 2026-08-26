@@ -1,12 +1,14 @@
 export function StageSummary({
   number,
   title,
+  technicalTitle,
   description,
   takeaway,
   outcome,
 }: {
   number: number | string;
   title: string;
+  technicalTitle: string;
   description: string;
   takeaway: string;
   outcome: string;
@@ -17,6 +19,7 @@ export function StageSummary({
         <span className="stageNumber">{number}</span>
         <span className="stageSummaryCopy">
           <b>{title}</b>
+          <small className="technicalLabel">Technical: {technicalTitle}</small>
           <small>{description}</small>
           <small className="stageTakeaway">
             <em>Key takeaway</em>

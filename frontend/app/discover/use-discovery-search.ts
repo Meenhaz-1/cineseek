@@ -29,7 +29,7 @@ export function useDiscoverySearch() {
   const [input, setInput] = useState("");
   const [query, setQuery] = useState(DEFAULT_EXAMPLE_QUERY);
   const [hasSearched, setHasSearched] = useState(false);
-  const [mode, setMode] = useState<Mode>("hybrid");
+  const mode: Mode = "hybrid";
   const [selected, setSelected] = useState<Movie | null>(null);
   const [coach, setCoach] = useState<CoachState>({ status: "loading" });
   const [coachRequest, setCoachRequest] = useState(0);
@@ -327,7 +327,6 @@ export function useDiscoverySearch() {
     runParserTests,
     selected,
     setInput,
-    setMode,
     setSelected,
     showMoreResults,
     showStickySearch,

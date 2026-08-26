@@ -9,6 +9,7 @@ export function analysisFromPlan(
 ) {
   const filters = plan?.filters ?? { genres: [], genreMode: "any" as const };
   const people = plan?.entities.people.map(({ name }) => name) ?? [];
+  const personCandidates = plan?.entities.personCandidates ?? [];
   const concepts = plan?.routes.concepts ?? [];
   const filterLabels = [
     filters.yearMin !== undefined ? `year >= ${filters.yearMin}` : undefined,
@@ -26,6 +27,7 @@ export function analysisFromPlan(
     intent: plan?.intent ?? ("general_search" as const),
     suggestedQuery: plan?.suggestedQuery,
     people,
+    personCandidates,
     genres: plan?.entities.genres ?? [],
     genreMode: filters.genreMode ?? ("any" as const),
     concepts,
@@ -88,36 +90,38 @@ export function analysisFromPlan(
   };
 }
 
+export type QueryAnalysis = ReturnType<typeof analysisFromPlan>;
+
 export function queryLabel(result: TitleRetrieval) {
   return result.retrievalQuery || result.normalizedQuery || "this query";
 }
 
 export function exactTakeaway(result: TitleRetrieval) {
   return result.exact.hit
-    ? `“${result.normalizedQuery}” resolved directly to ${result.exact.matches.map(({ title }) => title).join(", ")}. Later title-retrieval stages are unnecessary for this search.`
-    : `“${result.normalizedQuery}” has no exact hash key. The pipeline continues with “${result.retrievalQuery || "no residual title text"}” to protect recall.`;
+    ? `CineSeek found an exact title match: ${result.exact.matches.map(({ title }) => title).join(", ")}. No other title checks were needed.`
+    : `No title exactly matched “${result.normalizedQuery}”, so CineSeek continued with “${result.retrievalQuery || "the movie details in the search"}”.`;
 }
 
 export function tokenTakeaway(result: TitleRetrieval) {
   if (result.tokenLookup.skipped)
-    return `${result.tokenLookup.reason} This query will continue through its remaining structured metadata paths.`;
+    return `${result.tokenLookup.reason} CineSeek continued with people, genres, filters, and other movie details.`;
   const additional =
     result.tokenLookup.candidateCount - result.tokenLookup.intersectionCount;
-  return `For “${queryLabel(result)}”, the union found ${result.tokenLookup.candidateCount.toLocaleString()} titles and the intersection found ${result.tokenLookup.intersectionCount.toLocaleString()}. Union preserves ${additional.toLocaleString()} additional partial-token candidates for later scoring.`;
+  return `${result.tokenLookup.candidateCount.toLocaleString()} titles share at least one search word, and ${result.tokenLookup.intersectionCount.toLocaleString()} share every word. Keeping partial matches adds ${additional.toLocaleString()} possible movies.`;
 }
 
 export function fieldTakeaway(result: TitleRetrieval) {
   if (result.fieldLookup.skipped) return result.fieldLookup.reason;
   const top = result.fieldLookup.candidatesPreview[0]?.fieldMatch.bestMatch;
   return top
-    ? `“${result.normalizedQuery}” nominated ${result.fieldLookup.candidateCount.toLocaleString()} movies across typed fields. The preview includes a ${top.label.toLowerCase()} match on “${top.value}”; structured cast and director entities receive more weight than description text.`
-    : `No cast, director, genre, tag, or description field contains enough evidence for “${result.normalizedQuery}”. Title retrieval can still provide candidates.`;
+    ? `${result.fieldLookup.candidateCount.toLocaleString()} movies matched a person, genre, tag, or description. One strong example is ${top.label.toLowerCase()}: “${top.value}”.`
+    : `No person, genre, tag, or description matched “${result.normalizedQuery}”. Title matching can still find movies.`;
 }
 
 export function trigramTakeaway(result: TitleRetrieval) {
   if (result.trigramLookup.skipped)
-    return `${result.trigramLookup.reason} No typo-tolerant title candidates are needed for this query.`;
-  return `“${queryLabel(result)}” produced ${result.trigramLookup.trigrams.length} character trigrams with a ${result.trigramLookup.minimumMatches}-match threshold. That threshold admitted ${result.trigramLookup.candidateCount.toLocaleString()} typo-tolerant candidates.`;
+    return `${result.trigramLookup.reason} No spelling-tolerant title check was needed.`;
+  return `CineSeek split “${queryLabel(result)}” into ${result.trigramLookup.trigrams.length} overlapping three-letter groups. ${result.trigramLookup.candidateCount.toLocaleString()} titles shared enough groups to remain possible matches.`;
 }
 
 export function mergeTakeaway(result: TitleRetrieval) {
@@ -126,29 +130,29 @@ export function mergeTakeaway(result: TitleRetrieval) {
   const multiSource = result.combinedCandidates.candidatesPreview.filter(
     ({ sources }) => sources.length > 1,
   ).length;
-  return `Title, fuzzy, typed-field, and metadata retrieval produced ${result.combinedCandidates.candidateCount.toLocaleString()} unique IDs for “${queryLabel(result)}”. In the preview, ${multiSource} candidate${multiSource === 1 ? "" : "s"} were nominated by multiple paths.`;
+  return `After combining every search path and removing repeats, ${result.combinedCandidates.candidateCount.toLocaleString()} unique movies remained. ${multiSource} previewed movie${multiSource === 1 ? " was" : "s were"} found in more than one way.`;
 }
 
 export function metadataTakeaway(result: TitleRetrieval) {
   if (!result.metadataFilter.active)
-    return "This query has no supported hard metadata constraints, so all corpus records remain eligible for title retrieval.";
-  return `${result.metadataFilter.candidateCount.toLocaleString()} of ${result.metadataFilter.corpusCount.toLocaleString()} movies satisfy every recognized hard constraint. ${result.metadataFilter.excludedCount.toLocaleString()} records are removed before final ranking.`;
+    return "This search has no required year or rating filters, so no movies were removed at this step.";
+  return `${result.metadataFilter.candidateCount.toLocaleString()} of ${result.metadataFilter.corpusCount.toLocaleString()} movies met every required filter. ${result.metadataFilter.excludedCount.toLocaleString()} movies were removed.`;
 }
 
 export function fuzzyTakeaway(result: TitleRetrieval) {
   if (result.fuzzyScoring.skipped) return result.fuzzyScoring.reason;
   const top = result.fuzzyScoring.candidatesPreview[0];
   return top
-    ? `For “${queryLabel(result)}”, ${top.title} leads with ${top.dice.toFixed(3)} Dice and ${top.jaccard.toFixed(3)} Jaccard. The scores agree on ordering but express shared trigram overlap on different scales.`
-    : `No merged candidate received a trigram-similarity score for “${queryLabel(result)}”. The query needs a broader candidate-generation path.`;
+    ? `${top.title} shares the strongest pattern of three-letter groups with the search. Its technical scores are ${top.dice.toFixed(3)} Dice and ${top.jaccard.toFixed(3)} Jaccard.`
+    : `No movie shared enough three-letter groups with “${queryLabel(result)}” to receive a similarity score.`;
 }
 
 export function editTakeaway(result: TitleRetrieval) {
   if (result.editScoring.skipped) return result.editScoring.reason;
   const top = result.editScoring.candidatesPreview[0];
   return top
-    ? `${top.title} is closest to “${queryLabel(result)}” at ${top.editDistance} edits and ${top.editSimilarity.toFixed(3)} normalized similarity. This signal rewards character-level closeness, even when exact words fail.`
-    : `No candidate could be compared with “${queryLabel(result)}” by edit distance. Character-level similarity therefore contributes no evidence.`;
+    ? `${top.title} is closest in spelling to “${queryLabel(result)}”. It needs ${top.editDistance} letter changes, giving it ${top.editSimilarity.toFixed(3)} edit similarity.`
+    : `No movie title could be compared with “${queryLabel(result)}” by spelling difference.`;
 }
 
 export function coverageTakeaway(result: TitleRetrieval) {
@@ -156,8 +160,8 @@ export function coverageTakeaway(result: TitleRetrieval) {
     return result.tokenCoverageScoring.reason;
   const top = result.tokenCoverageScoring.candidatesPreview[0];
   return top
-    ? `${top.title} contains ${top.matchedTokenCount} of ${top.queryTokenCount} searchable words from “${queryLabel(result)}” (${Math.round(top.coverage * 100)}%). This stage values complete words but still cannot see their order.`
-    : `No candidate contains a complete searchable token from “${queryLabel(result)}”. Exact token coverage therefore cannot separate the candidates.`;
+    ? `${top.title} contains ${top.matchedTokenCount} of ${top.queryTokenCount} complete search words (${Math.round(top.coverage * 100)}%). This check does not consider word order.`
+    : `No movie title contains a complete search word from “${queryLabel(result)}”.`;
 }
 
 export function orderedTakeaway(result: TitleRetrieval) {
@@ -165,33 +169,33 @@ export function orderedTakeaway(result: TitleRetrieval) {
     return result.orderedTokenProximityScoring.reason;
   const top = result.orderedTokenProximityScoring.candidatesPreview[0];
   return top
-    ? `${top.title} matches ${Math.round(top.orderedCoverage * 100)}% of “${queryLabel(result)}” in order with ${top.gapCount} gap${top.gapCount === 1 ? "" : "s"}. Its ${top.proximity.toFixed(3)} proximity${top.phraseMatch ? " forms a complete adjacent phrase" : " does not form a complete phrase"}.`
-    : `No candidate forms an ordered alignment for “${queryLabel(result)}”. Word order and proximity therefore contribute no ranking evidence.`;
+    ? `${top.title} matches ${Math.round(top.orderedCoverage * 100)}% of the search words in order, with ${top.gapCount} gap${top.gapCount === 1 ? "" : "s"}. Its technical proximity score is ${top.proximity.toFixed(3)}${top.phraseMatch ? ", and the words form a complete phrase" : ""}.`
+    : `No movie title matches the search words in the same order.`;
 }
 
 export function combinedTakeaway(result: TitleRetrieval) {
   if (result.combinedScoring.skipped) return result.combinedScoring.reason;
   const top = result.combinedScoring.candidatesPreview[0];
   if (!top)
-    return `No combined score was produced for “${queryLabel(result)}”. Adjusting weights cannot change an empty candidate pool.`;
+    return `CineSeek could not create a final score because there were no possible movies to rank.`;
   if (result.combinedScoring.rankingContext.structuredGenreDiscovery) {
-    return `${top.title} leads with ${Math.round(top.genreFocus * 100)}% genre focus, a ${top.bayesianRating.toFixed(2)} Bayesian rating, and ${Math.round(top.ratingEvidence * 100)}% rating-count evidence. Its final structured discovery score is ${top.structuredGenreScore.toFixed(3)}.`;
+    return `${top.title} ranks first by combining genre match, rating quality, and rating count. Its technical final score is ${top.structuredGenreScore.toFixed(3)}.`;
   }
   if (top.personPopularityBoost) {
     const boost = top.personPopularityBoost;
-    return `${top.title} receives a ${boost.contribution.toFixed(3)} person-popularity contribution from ${boost.name}'s ${boost.movieCount}-movie catalog. The contribution decays across repeated movies from the same person, keeping the final ${top.combinedScore.toFixed(3)} score movie-focused.`;
+    return `${top.title} gets a ${boost.contribution.toFixed(3)} boost because it is connected to ${boost.name}, who has ${boost.movieCount} movies in the catalog. The boost becomes smaller for repeated movies from the same person.`;
   }
   if (top.fieldMatch?.bestMatch) {
-    return `${top.title} wins with a ${top.combinedScore.toFixed(3)} blended score. Its strongest typed-field evidence is ${top.fieldMatch.bestMatch.label.toLowerCase()}: “${top.fieldMatch.bestMatch.value}” (${top.fieldScore.toFixed(3)}).`;
+    return `${top.title} ranks first with a ${top.combinedScore.toFixed(3)} final score. Its strongest movie-detail match is ${top.fieldMatch.bestMatch.label.toLowerCase()}: “${top.fieldMatch.bestMatch.value}”.`;
   }
   const leadingSignal = WEIGHT_CONTROLS.map(({ key, label }) => ({
     label,
     contribution: top.contributions[key],
   })).sort((left, right) => right.contribution - left.contribution)[0];
   if (result.combinedScoring.rankingContext.genreOverlapPrecedesTitleScore) {
-    return `${top.title} matches ${top.metadataGenreMatchCount} of ${result.combinedScoring.rankingContext.requestedGenres.length} requested genres, which is considered before its ${top.combinedScore.toFixed(3)} title score.`;
+    return `${top.title} matches ${top.metadataGenreMatchCount} of ${result.combinedScoring.rankingContext.requestedGenres.length} requested genres. CineSeek checks that before using its ${top.combinedScore.toFixed(3)} title score.`;
   }
-  return `${top.title} wins “${queryLabel(result)}” with a ${top.combinedScore.toFixed(3)} combined score. ${leadingSignal.label} contributes the largest share at ${leadingSignal.contribution.toFixed(3)}.`;
+  return `${top.title} ranks first with a ${top.combinedScore.toFixed(3)} final score. ${leadingSignal.label} adds the largest share: ${leadingSignal.contribution.toFixed(3)}.`;
 }
 
 export function fullResultMovie(result: FullSearchResult): Movie {

@@ -18,6 +18,7 @@ frontend/.env.local
 .next/
 .local/
 *.tmp
+*.tsbuildinfo
 
 .vercel/
 .env.local
