@@ -40,6 +40,7 @@ export function DiscoveryWorkspace() {
     displayedResults,
     genreWeightOverrides,
     genreWeightTotal,
+    hasSearched,
     heroSearchRef,
     inferred,
     input,
@@ -51,6 +52,7 @@ export function DiscoveryWorkspace() {
     rankerWeightTotal,
     resetGenreWeights,
     resetRankerWeights,
+    resultsSummaryRef,
     runExample,
     runParserTests,
     selected,
@@ -103,10 +105,18 @@ export function DiscoveryWorkspace() {
             ))}
           </div>
         </div>
-        <div className="resultsHeader">
+        <div
+          className="resultsHeader"
+          ref={resultsSummaryRef}
+          tabIndex={-1}
+          aria-busy={titleRetrievalLoading}
+        >
           <div>
-            <h2>Top matches</h2>
-            <p>For “{query}” · full-corpus combined ranking</p>
+            <h2>{hasSearched ? "Top matches" : "Example matches"}</h2>
+            <p>
+              {hasSearched ? "For" : "Example results for"} “{query}” ·
+              full-corpus combined ranking
+            </p>
           </div>
           <div className="resultsMeta">
             <span>
@@ -121,6 +131,15 @@ export function DiscoveryWorkspace() {
             </small>
           </div>
         </div>
+        {hasSearched &&
+          titleRetrieval.status === "ready" &&
+          titleRetrieval.query === query && (
+            <p className="srOnly" role="status" aria-live="polite">
+              Showing {titleRetrieval.result?.searchResults.shown ?? 0} of{" "}
+              {titleRetrieval.result?.searchResults.total.toLocaleString() ?? 0}{" "}
+              matching movies for {query}.
+            </p>
+          )}
         <div className="contentGrid">
           <div
             className="movieRail"
@@ -140,6 +159,12 @@ export function DiscoveryWorkspace() {
                 onClick={() => setSelected(movie)}
                 aria-label={`View details for ${movie.title}`}
               >
+                <div className="cardHeading">
+                  <h3>{movie.title}</h3>
+                  <p>
+                    {movie.year} · {movie.genres.slice(0, 2).join(" / ")}
+                  </p>
+                </div>
                 <MoviePoster
                   key={`${movie.id}-${movie.posterPath ?? "fallback"}`}
                   movieId={movie.id}
@@ -156,10 +181,6 @@ export function DiscoveryWorkspace() {
                   }
                 />
                 <div className="cardBody">
-                  <h3>{movie.title}</h3>
-                  <p>
-                    {movie.year} · {movie.genres.slice(0, 2).join(" / ")}
-                  </p>
                   {movie.matchReason && (
                     <span className="matchReason">
                       <b>{movie.matchReason.label}</b>

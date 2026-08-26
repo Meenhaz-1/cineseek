@@ -36,7 +36,7 @@ export function StickySearch({
       <span className="stickySearchMode" aria-hidden="true">
         {mode}
       </span>
-      <button type="submit">
+      <button type="submit" disabled={!input.trim()}>
         Search <span aria-hidden="true">→</span>
       </button>
     </form>

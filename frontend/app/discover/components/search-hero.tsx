@@ -42,16 +42,14 @@ export function SearchHero({
           <label className="srOnly" htmlFor="movie-search">
             Search movies
           </label>
-          <span aria-hidden="true" className="searchIcon">
-            ⌕
-          </span>
           <input
             id="movie-search"
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
-            placeholder="Try “dreamlike romance about memory”"
+            placeholder="Search titles, people, genres, or moods"
+            autoComplete="off"
           />
-          <button type="submit">
+          <button type="submit" disabled={!input.trim()}>
             Search <span aria-hidden="true">→</span>
           </button>
         </form>

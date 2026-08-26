@@ -14,6 +14,7 @@ export const DEFAULT_RANKER_WEIGHTS: CombinedWeights = {
 };
 
 export const RESULT_PAGE_SIZE = 24;
+export const DEFAULT_EXAMPLE_QUERY = "dark sci-fi with philosophy";
 export const RESULT_PALETTES = [
   "jade",
   "gold",

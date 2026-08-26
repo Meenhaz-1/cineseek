@@ -3,8 +3,12 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { QueryPlan } from "../../lib/query-planner.mjs";
-import { examples, type Movie } from "../data";
-import { DEFAULT_RANKER_WEIGHTS, RESULT_PAGE_SIZE } from "./search-config";
+import type { Movie } from "../data";
+import {
+  DEFAULT_EXAMPLE_QUERY,
+  DEFAULT_RANKER_WEIGHTS,
+  RESULT_PAGE_SIZE,
+} from "./search-config";
 import type {
   CoachState,
   CombinedWeightKey,
@@ -22,8 +26,9 @@ import { analysisFromPlan, fullResultMovie } from "./search-presenters";
 export function useDiscoverySearch() {
   const portfolioMode =
     process.env.NEXT_PUBLIC_CINESEEK_DEPLOYMENT_MODE === "portfolio";
-  const [input, setInput] = useState("dark sci-fi with philosophy");
-  const [query, setQuery] = useState(input);
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState(DEFAULT_EXAMPLE_QUERY);
+  const [hasSearched, setHasSearched] = useState(false);
   const [mode, setMode] = useState<Mode>("hybrid");
   const [selected, setSelected] = useState<Movie | null>(null);
   const [coach, setCoach] = useState<CoachState>({ status: "loading" });
@@ -43,6 +48,8 @@ export function useDiscoverySearch() {
   const [resultLimit, setResultLimit] = useState(RESULT_PAGE_SIZE);
   const [showStickySearch, setShowStickySearch] = useState(false);
   const heroSearchRef = useRef<HTMLFormElement>(null);
+  const resultsSummaryRef = useRef<HTMLDivElement>(null);
+  const focusResultsAfterLoad = useRef(false);
 
   const activePlan =
     titleRetrieval.status === "ready" && titleRetrieval.query === query
@@ -102,6 +109,25 @@ export function useDiscoverySearch() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [selected]);
+
+  useEffect(() => {
+    if (
+      !focusResultsAfterLoad.current ||
+      titleRetrieval.status !== "ready" ||
+      titleRetrieval.query !== query
+    )
+      return;
+    focusResultsAfterLoad.current = false;
+    const resultsSummary = resultsSummaryRef.current;
+    if (!resultsSummary) return;
+    resultsSummary.focus({ preventScroll: true });
+    resultsSummary.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    });
+  }, [query, titleRetrieval]);
 
   useEffect(() => {
     if (!activePlan || portfolioMode) return;
@@ -210,7 +236,10 @@ export function useDiscoverySearch() {
     setGenreWeightOverrides(null);
   }
 
-  function chooseQuery(nextQuery: string) {
+  function chooseQuery(nextQuery: string, revealResults = false) {
+    if (!nextQuery) return;
+    setHasSearched(true);
+    if (revealResults) focusResultsAfterLoad.current = true;
     setCoach({ status: "loading" });
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
@@ -225,25 +254,22 @@ export function useDiscoverySearch() {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    chooseQuery(input.trim() || examples[0]);
+    chooseQuery(input.trim(), true);
   }
 
   function submitSticky(event: FormEvent) {
     submit(event);
-    document
-      .getElementById("discover")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function runExample(example: string) {
     setInput(example);
-    chooseQuery(example);
+    chooseQuery(example, true);
   }
 
   function acceptSuggestion() {
     if (!suggestedQuery) return;
     setInput(suggestedQuery);
-    chooseQuery(suggestedQuery);
+    chooseQuery(suggestedQuery, true);
   }
 
   async function runParserTests() {
@@ -282,6 +308,7 @@ export function useDiscoverySearch() {
     displayedResults,
     genreWeightOverrides,
     genreWeightTotal,
+    hasSearched,
     heroSearchRef,
     inferred,
     input,
@@ -295,6 +322,7 @@ export function useDiscoverySearch() {
     resetRankerWeights,
     responseCombinedScoring,
     resultLimit,
+    resultsSummaryRef,
     runExample,
     runParserTests,
     selected,
