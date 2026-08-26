@@ -415,6 +415,8 @@ export function runTitleSearch(pipeline, input, options = {}) {
           queryPlan?.routes.structuredGenreRanking === true,
         genreWeights: options.genreWeights,
         ratingStats: pipeline.ratingStats,
+        personCandidates: queryPlan?.entities?.personCandidates ?? [],
+        personRole: queryPlan?.routes.fieldRole,
       },
     );
     scoringMs = roundedMs(scoringStartedAt);
@@ -471,6 +473,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
           titleScore,
           fieldScore,
           fieldMatch,
+          personPopularityBoost,
         }) => ({
           id,
           title,
@@ -479,6 +482,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
           titleScore,
           fieldScore,
           matchReason: fieldMatch?.bestMatch,
+          personPopularityBoost,
         }),
       ) ?? []);
   if (resolvedInput.sort?.field === "year") {

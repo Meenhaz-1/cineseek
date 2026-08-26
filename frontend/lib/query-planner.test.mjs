@@ -53,6 +53,30 @@ const registry = {
         actorMovieCount: 0,
         directorMovieCount: 30,
       },
+      {
+        id: "person:steven-soderbergh",
+        name: "Steven Soderbergh",
+        roles: ["director"],
+        movieCount: 25,
+        actorMovieCount: 0,
+        directorMovieCount: 25,
+      },
+      {
+        id: "person:steven-seagal",
+        name: "Steven Seagal",
+        roles: ["actor"],
+        movieCount: 20,
+        actorMovieCount: 20,
+        directorMovieCount: 0,
+      },
+      {
+        id: "person:allan-smith",
+        name: "Allan Smith",
+        roles: ["actor"],
+        movieCount: 10,
+        actorMovieCount: 10,
+        directorMovieCount: 0,
+      },
     ],
     genres: [
       { id: "genre:horror", name: "Horror" },
@@ -132,6 +156,37 @@ test("does not force ambiguous or exact entities into corrections", () => {
   assert.equal(planQuery("cruise", indexes).corrections.length, 0);
   assert.equal(planQuery("tom cruise", indexes).corrections.length, 0);
   assert.equal(planQuery("interstellar", indexes).corrections.length, 0);
+});
+
+test("ranks partial person candidates by catalog size without narrowing retrieval", () => {
+  const plan = planQuery("steven", indexes);
+  assert.equal(plan.intent, "general_search");
+  assert.equal(plan.corrections.length, 0);
+  assert.equal(plan.entities.personCandidates[0].name, "Steven Spielberg");
+  assert.equal(plan.entities.personCandidates[0].role, "director");
+  assert.equal(plan.entities.personCandidates[0].movieCount, 30);
+  assert.equal(plan.entities.personCandidates[0].roleMovieCount, 30);
+  assert.equal(plan.routes.titleQuery, "steven");
+  assert.equal(plan.routes.fieldQuery, "steven");
+});
+
+test("uses role-specific catalog size for contextual partial names", () => {
+  const director = planQuery("director steven", indexes);
+  assert.equal(director.entities.personCandidates[0].name, "Steven Spielberg");
+  assert.equal(director.entities.personCandidates[0].role, "director");
+  assert.equal(director.routes.titleQuery, "");
+  assert.equal(director.routes.fieldQuery, "steven");
+  assert.equal(director.routes.fieldRole, "director");
+  const actor = planQuery("actor steven", indexes);
+  assert.equal(actor.entities.personCandidates[0].name, "Steven Seagal");
+  assert.equal(actor.entities.personCandidates[0].role, "actor");
+  assert.equal(actor.routes.fieldRole, "actor");
+});
+
+test("does not turn short control-like prefixes into person discovery", () => {
+  const plan = planQuery("all movies", indexes);
+  assert.equal(plan.entities.personCandidates.length, 0);
+  assert.notEqual(plan.intent, "person_discovery");
 });
 
 test("retrieval input is derived only from the plan", () => {

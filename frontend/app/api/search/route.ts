@@ -100,6 +100,7 @@ export async function POST(request: Request) {
       titleScore: ranked.titleScore,
       fieldScore: ranked.fieldScore,
       matchReason: ranked.matchReason,
+      personPopularityBoost: ranked.personPopularityBoost,
     }));
     const results = {
       items,

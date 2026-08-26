@@ -21,6 +21,16 @@ export type Movie = {
     value: string;
     matchType: string;
   };
+  personPopularityBoost?: {
+    name: string;
+    role: "actor" | "director";
+    movieCount: number;
+    roleMovieCount: number;
+    occurrence: number;
+    signal: number;
+    decay: number;
+    contribution: number;
+  };
   relevanceScore?: number;
   learningUseCase?: string;
 };
