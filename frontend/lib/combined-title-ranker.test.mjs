@@ -253,3 +253,157 @@ test("custom single-genre weights alter the active profile deterministically", (
   assert.equal(result.candidatesPreview[0].id, "popular");
   assert.equal(result.rankingContext.structuredGenreWeights.ratingEvidence, 1);
 });
+
+test("adds a decaying catalog-size contribution to multiple person-linked movies", () => {
+  const personRecords = new Map([
+    [
+      "other",
+      {
+        id: "other",
+        title: "Steven's Story",
+        averageRating: 4.5,
+        ratingCount: 50,
+        genres: [],
+      },
+    ],
+    [
+      "spielberg-low",
+      {
+        id: "spielberg-low",
+        title: "Early Work",
+        averageRating: 4.8,
+        ratingCount: 5,
+        genres: [],
+      },
+    ],
+    [
+      "spielberg-popular",
+      {
+        id: "spielberg-popular",
+        title: "Popular Work",
+        averageRating: 4.2,
+        ratingCount: 200,
+        genres: [],
+      },
+    ],
+    [
+      "spielberg-cast",
+      {
+        id: "spielberg-cast",
+        title: "Documentary",
+        averageRating: 5,
+        ratingCount: 500,
+        genres: [],
+      },
+    ],
+  ]);
+  const match = (field, value, score) => ({
+    score,
+    exactEntityMatch: false,
+    bestMatch: { field, value, score },
+    matches: [{ field, value, score }],
+  });
+  const fieldMatches = new Map([
+    ["other", match("cast", "Steven Other", 0.9)],
+    ["spielberg-low", match("directors", "Steven Spielberg", 0.855)],
+    ["spielberg-popular", match("directors", "Steven Spielberg", 0.855)],
+    ["spielberg-cast", match("cast", "Steven Spielberg", 0.9)],
+  ]);
+  const baseline = scoreCombinedTitleCandidates(
+    personRecords,
+    [...personRecords.keys()],
+    "steven",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    { fieldMatches },
+  );
+  const result = scoreCombinedTitleCandidates(
+    personRecords,
+    [...personRecords.keys()],
+    "steven",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    {
+      fieldMatches,
+      personCandidates: [
+        {
+          id: "person:spielberg",
+          name: "Steven Spielberg",
+          roles: ["actor", "director"],
+          role: "director",
+          movieCount: 35,
+          roleMovieCount: 33,
+        },
+      ],
+    },
+  );
+  const boosted = result.candidatesPreview.filter(
+    ({ personPopularityBoost }) => personPopularityBoost,
+  );
+  assert.equal(boosted.length, 2);
+  assert.equal(boosted[0].personPopularityBoost.name, "Steven Spielberg");
+  assert.ok(
+    boosted[0].personPopularityBoost.contribution >
+      boosted[1].personPopularityBoost.contribution,
+  );
+  for (const candidate of boosted)
+    assert.ok(
+      candidate.combinedScore >
+        baseline.candidatesPreview.find(({ id }) => id === candidate.id)
+          .combinedScore,
+    );
+  assert.equal(
+    result.candidatesPreview.find(({ id }) => id === "other")
+      .personPopularityBoost,
+    undefined,
+  );
+});
+
+test("uses base rank to apply popularity decay deterministically", () => {
+  const noRatingRecords = new Map([
+    ["b", { id: "b", title: "Beta", genres: [] }],
+    ["a", { id: "a", title: "Alpha", genres: [] }],
+  ]);
+  const directorMatch = {
+    score: 0.855,
+    exactEntityMatch: false,
+    bestMatch: {
+      field: "directors",
+      value: "Steven Spielberg",
+      score: 0.855,
+    },
+    matches: [
+      {
+        field: "directors",
+        value: "Steven Spielberg",
+        score: 0.855,
+      },
+    ],
+  };
+  const result = scoreCombinedTitleCandidates(
+    noRatingRecords,
+    [...noRatingRecords.keys()],
+    "steven",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    {
+      fieldMatches: new Map([
+        ["b", directorMatch],
+        ["a", directorMatch],
+      ]),
+      personCandidates: [
+        {
+          id: "person:spielberg",
+          name: "Steven Spielberg",
+          roles: ["director"],
+          role: "director",
+          movieCount: 35,
+          roleMovieCount: 33,
+        },
+      ],
+    },
+  );
+  assert.equal(result.candidatesPreview[0].id, "b");
+  assert.equal(result.candidatesPreview[0].personPopularityBoost.occurrence, 1);
+  assert.equal(result.candidatesPreview[1].personPopularityBoost.occurrence, 2);
+});

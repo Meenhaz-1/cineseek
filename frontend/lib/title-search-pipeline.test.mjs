@@ -128,6 +128,91 @@ test("director and description fields generate candidates with explanations", ()
   );
 });
 
+test("applies partial-person popularity to multiple movies through retrieval", () => {
+  const pipeline = buildTitleSearchPipeline([
+    {
+      _id: "spielberg-cast",
+      title: "Spielberg Documentary",
+      metadata: {
+        cast: ["Steven Spielberg"],
+        directors: [],
+        genres: ["Documentary"],
+        average_rating: 5,
+        rating_count: 500,
+      },
+    },
+    {
+      _id: "spielberg-directed",
+      title: "Popular Adventure",
+      metadata: {
+        cast: [],
+        directors: ["Steven Spielberg"],
+        genres: ["Adventure"],
+        average_rating: 4.2,
+        rating_count: 200,
+      },
+    },
+    {
+      _id: "other-steven",
+      title: "Another Film",
+      metadata: {
+        cast: ["Steven Other"],
+        directors: [],
+        genres: ["Drama"],
+        average_rating: 4,
+        rating_count: 20,
+      },
+    },
+    {
+      _id: "spielberg-directed-2",
+      title: "Second Adventure",
+      metadata: {
+        cast: [],
+        directors: ["Steven Spielberg"],
+        genres: ["Adventure"],
+        average_rating: 4,
+        rating_count: 100,
+      },
+    },
+  ]);
+  const result = runTitleSearch(pipeline, {
+    effectiveQuery: "steven",
+    filters: { genres: [] },
+    routes: {
+      titleQuery: "steven",
+      fieldQuery: "steven",
+      genreTitleFallbackQuery: "steven",
+      structuredGenreRanking: false,
+    },
+    entities: {
+      personCandidates: [
+        {
+          id: "person:spielberg",
+          name: "Steven Spielberg",
+          roles: ["actor", "director"],
+          role: "director",
+          movieCount: 35,
+          roleMovieCount: 33,
+        },
+      ],
+    },
+  });
+  const boosted = result.evaluation.rankedResults.filter(
+    ({ personPopularityBoost }) => personPopularityBoost,
+  );
+  assert.equal(boosted.length, 2);
+  assert.ok(
+    boosted.every(
+      ({ personPopularityBoost }) =>
+        personPopularityBoost.name === "Steven Spielberg",
+    ),
+  );
+  assert.ok(
+    boosted[0].personPopularityBoost.contribution >
+      boosted[1].personPopularityBoost.contribution,
+  );
+});
+
 test("exact hits become benchmark candidates and ranked results", () => {
   const pipeline = buildTitleSearchPipeline(documents);
   const result = runTitleSearch(pipeline, {

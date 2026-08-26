@@ -11,6 +11,17 @@ export type CombinedWeightKey =
 export type CombinedWeights = Record<CombinedWeightKey, number>;
 export type GenreWeightKey = "genreFocus" | "bayesianRating" | "ratingEvidence";
 export type GenreWeights = Record<GenreWeightKey, number>;
+export type PersonPopularityBoost = {
+  entityId: string;
+  name: string;
+  role: "actor" | "director";
+  movieCount: number;
+  roleMovieCount: number;
+  occurrence: number;
+  signal: number;
+  decay: number;
+  contribution: number;
+};
 export type CombinedTitleCandidate = TitleTokenRecord & {
   signals: CombinedWeights;
   contributions: CombinedWeights;
@@ -26,6 +37,8 @@ export type CombinedTitleCandidate = TitleTokenRecord & {
   structuredGenreContributions: GenreWeights;
   structuredGenreScore: number;
   isExactTitleMatch: boolean;
+  baseCombinedScore?: number;
+  personPopularityBoost?: PersonPopularityBoost;
 };
 
 export const COMBINED_WEIGHT_KEYS: CombinedWeightKey[];
@@ -34,6 +47,7 @@ export const GENRE_WEIGHT_KEYS: GenreWeightKey[];
 export const SINGLE_GENRE_DISCOVERY_WEIGHTS: GenreWeights;
 export const COMPOUND_GENRE_DISCOVERY_WEIGHTS: GenreWeights;
 export const BAYESIAN_RATING_PRIOR: number;
+export const PERSON_POPULARITY_WEIGHT: number;
 export function validateCombinedWeights(input?: Partial<CombinedWeights>): {
   weights: CombinedWeights;
   effectiveWeights: CombinedWeights;
@@ -76,6 +90,15 @@ export function scoreCombinedTitleCandidates(
         { bayesianRating: number; ratingEvidence: number }
       >;
     };
+    personCandidates?: {
+      id: string;
+      name: string;
+      roles: ("actor" | "director")[];
+      role: "actor" | "director";
+      movieCount: number;
+      roleMovieCount: number;
+    }[];
+    personRole?: "actor" | "director";
   },
 ): {
   method:
@@ -97,6 +120,8 @@ export function scoreCombinedTitleCandidates(
     structuredGenreWeights: GenreWeights | null;
     structuredGenreWeightTotal: number | null;
     bayesianPrior: number;
+    personPopularityWeight: number;
+    personPopularityApplied: boolean;
   };
   candidateCount: number;
   candidatesPreview: CombinedTitleCandidate[];

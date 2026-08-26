@@ -43,6 +43,7 @@ export const COMPOUND_GENRE_DISCOVERY_WEIGHTS = {
 };
 
 export const BAYESIAN_RATING_PRIOR = 20;
+export const PERSON_POPULARITY_WEIGHT = 0.06;
 
 function validateRelativeWeights(input, defaults, keys, label) {
   if (
@@ -146,6 +147,7 @@ export function scoreCombinedTitleCandidates(
       : new Set();
   const genreFallbackQuery = rankingContext.genreFallbackQuery ?? "";
   const blendFieldEvidence = fieldMatches instanceof Map;
+  const personCandidates = rankingContext.personCandidates ?? [];
   const isStructuredGenreDiscovery =
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
@@ -181,7 +183,7 @@ export function scoreCombinedTitleCandidates(
   const zeroSignals = Object.fromEntries(
     COMBINED_WEIGHT_KEYS.map((key) => [key, 0]),
   );
-  const candidates = candidateIds
+  let candidates = candidateIds
     .map((id) => records.get(id))
     .filter(Boolean)
     .map((record) => {
@@ -312,6 +314,68 @@ export function scoreCombinedTitleCandidates(
         left.title.localeCompare(right.title)
       );
     });
+  const normalizedPersonName = (name) =>
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  const popularityMetric = (person) =>
+    rankingContext.personRole ? person.roleMovieCount : person.movieCount;
+  const maximumPersonMovieCount = Math.max(
+    0,
+    ...personCandidates.map(popularityMetric),
+  );
+  const occurrencesByPerson = new Map();
+  const baseRankById = new Map(candidates.map(({ id }, rank) => [id, rank]));
+  if (maximumPersonMovieCount > 0) {
+    candidates = candidates
+      .map((candidate) => {
+        const person = personCandidates.find((personCandidate) => {
+          const personName = normalizedPersonName(personCandidate.name);
+          return candidate.fieldMatch?.matches.some((match) => {
+            const matchedRole =
+              rankingContext.personRole ?? personCandidate.role;
+            const roleMatches =
+              match.field ===
+              (matchedRole === "director" ? "directors" : "cast");
+            return (
+              roleMatches && normalizedPersonName(match.value) === personName
+            );
+          });
+        });
+        if (!person) return candidate;
+        const occurrence = (occurrencesByPerson.get(person.id) ?? 0) + 1;
+        occurrencesByPerson.set(person.id, occurrence);
+        const signal = popularityMetric(person) / maximumPersonMovieCount;
+        const decay = 1 / Math.sqrt(occurrence);
+        const contribution = Number(
+          (PERSON_POPULARITY_WEIGHT * signal * decay).toFixed(6),
+        );
+        return {
+          ...candidate,
+          baseCombinedScore: candidate.combinedScore,
+          combinedScore: Number(
+            Math.min(1, candidate.combinedScore + contribution).toFixed(6),
+          ),
+          personPopularityBoost: {
+            entityId: person.id,
+            name: person.name,
+            role: person.role,
+            movieCount: person.movieCount,
+            roleMovieCount: person.roleMovieCount,
+            occurrence,
+            signal: Number(signal.toFixed(6)),
+            decay: Number(decay.toFixed(6)),
+            contribution,
+          },
+        };
+      })
+      .sort(
+        (left, right) =>
+          right.combinedScore - left.combinedScore ||
+          baseRankById.get(left.id) - baseRankById.get(right.id),
+      );
+  }
   return {
     method: isStructuredGenreDiscovery
       ? "weighted_structured_genre_ranker"
@@ -345,6 +409,8 @@ export function scoreCombinedTitleCandidates(
         ? genreWeightProfile.totalWeight
         : null,
       bayesianPrior: BAYESIAN_RATING_PRIOR,
+      personPopularityWeight: PERSON_POPULARITY_WEIGHT,
+      personPopularityApplied: maximumPersonMovieCount > 0,
     },
     weights,
     effectiveWeights,

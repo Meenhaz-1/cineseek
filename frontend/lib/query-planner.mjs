@@ -16,7 +16,7 @@ import {
 import { suggestPersonName } from "./person-name-suggestion.mjs";
 
 export const QUERY_PLANNER_ID = "deterministic";
-export const QUERY_PLANNER_VERSION = "1.3.0";
+export const QUERY_PLANNER_VERSION = "1.4.0";
 export const SEMANTIC_SYNONYMS = {
   dark: ["gritty", "crime", "thriller"],
   space: ["sci-fi", "black hole"],
@@ -333,6 +333,59 @@ function exactPeople(query, indexes, preferredRole) {
     }
   }
   return found;
+}
+
+function partialPersonCandidates(query, indexes, preferredRole) {
+  const meaningfulTokens = tokens(query).filter(
+    (token) => !CONTROL_WORDS.has(token),
+  );
+  if (meaningfulTokens.length !== 1 || meaningfulTokens[0].length < 3)
+    return [];
+  const matchedText = meaningfulTokens[0];
+  const rolePool =
+    preferredRole === "director"
+      ? indexes.directors
+      : preferredRole === "actor"
+        ? indexes.actors
+        : indexes.people;
+  return rolePool
+    .map((person) => {
+      const matchedNameToken = tokens(person.name)[0];
+      if (!matchedNameToken?.startsWith(matchedText)) return null;
+      if (matchedNameToken !== matchedText && matchedText.length < 4)
+        return null;
+      const role = personRole(person, preferredRole);
+      const roleMovieCount =
+        role === "director"
+          ? person.directorMovieCount
+          : person.actorMovieCount;
+      return {
+        id: person.id,
+        name: person.name,
+        roles: person.roles,
+        role,
+        movieCount: person.movieCount,
+        roleMovieCount,
+        matchedText,
+        confidence: Number(
+          Math.min(1, matchedText.length / matchedNameToken.length).toFixed(3),
+        ),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      const leftPopularity = preferredRole
+        ? left.roleMovieCount
+        : left.movieCount;
+      const rightPopularity = preferredRole
+        ? right.roleMovieCount
+        : right.movieCount;
+      return (
+        rightPopularity - leftPopularity ||
+        left.name.localeCompare(right.name) ||
+        left.id.localeCompare(right.id)
+      );
+    });
 }
 
 function personCorrection(query, indexes, preferredRole) {
@@ -654,6 +707,17 @@ export function planQuery(rawQuery, indexes) {
   const rawExactTitle = indexes.normalizedTitles.has(
     normalizeForEditDistance(normalizedQuery),
   );
+  const rawMetadata = parseMetadataQuery(normalizedQuery);
+  const rawHasMetadata =
+    rawMetadata.genres.length > 0 ||
+    rawMetadata.yearMin !== undefined ||
+    rawMetadata.yearMax !== undefined ||
+    rawMetadata.ratingMin !== undefined ||
+    rawMetadata.ratingCountMin !== undefined;
+  const personCandidates =
+    rawExactTitle || rawHasMetadata
+      ? []
+      : partialPersonCandidates(normalizedQuery, indexes, preferredRole);
 
   const candidates = {
     person: rawExactTitle
@@ -712,6 +776,8 @@ export function planQuery(rawQuery, indexes) {
     metadata,
   );
   const personTokenSet = new Set(people.flatMap(({ name }) => tokens(name)));
+  for (const candidate of personCandidates)
+    personTokenSet.add(candidate.matchedText);
   const personResidualTerms = residualTitleTerms.filter(
     (token) =>
       !personTokenSet.has(token) &&
@@ -730,9 +796,12 @@ export function planQuery(rawQuery, indexes) {
   const ownsPersonRouting = Boolean(
     preferredRole || selected?.entityType === "person",
   );
+  const ownsPartialPersonRouting = Boolean(
+    preferredRole && personCandidates.length,
+  );
   const titleQuery =
     metadata.explicitTitleText ||
-    (people.length && ownsPersonRouting
+    ((people.length && ownsPersonRouting) || ownsPartialPersonRouting
       ? personResidualTerms.join(" ")
       : hasMetadata && residualTitleTerms.length === 0
         ? ""
@@ -751,9 +820,11 @@ export function planQuery(rawQuery, indexes) {
   const fieldQuery =
     people.length && ownsPersonRouting
       ? people.map(({ name }) => normalize(name)).join(" ")
-      : isPureGenreDiscovery
-        ? ""
-        : effectiveQuery;
+      : ownsPartialPersonRouting
+        ? personCandidates[0].matchedText
+        : isPureGenreDiscovery
+          ? ""
+          : effectiveQuery;
   const genreTitleFallbackQuery = [
     ...new Set([
       ...metadata.matchedGenreEntries.map(([alias]) => alias),
@@ -839,6 +910,10 @@ export function planQuery(rawQuery, indexes) {
     trace.push(
       `Linked ${people.map(({ name, role }) => `${name}${role ? ` (${role})` : ""}`).join(", ")} to the full entity registry.`,
     );
+  if (personCandidates.length)
+    trace.push(
+      `Found ${personCandidates.length} partial person-name signals for movie ranking; catalog size can contribute to relevance without changing the search intent.`,
+    );
   if (metadata.genres.length)
     trace.push(
       `Parsed genre metadata: ${metadata.genres.join(", ")} (${metadata.genreMode.toUpperCase()}).`,
@@ -869,7 +944,10 @@ export function planQuery(rawQuery, indexes) {
             : "dual",
       titleQuery,
       fieldQuery,
-      fieldRole: people.length === 1 ? preferredRole : undefined,
+      fieldRole:
+        people.length === 1 || personCandidates.length
+          ? preferredRole
+          : undefined,
       genreTitleFallbackQuery,
       titlePriority: exactTitle
         ? "exact"
@@ -885,7 +963,11 @@ export function planQuery(rawQuery, indexes) {
         .map((term) => ({ term, values: SEMANTIC_SYNONYMS[term] })),
       structuredGenreRanking: isPureGenreDiscovery,
     },
-    entities: { people, genres: metadata.genres },
+    entities: {
+      people,
+      personCandidates: personCandidates.slice(0, 5),
+      genres: metadata.genres,
+    },
     filters,
     sort,
     unavailableFilters,

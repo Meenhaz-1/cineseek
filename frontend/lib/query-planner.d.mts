@@ -17,6 +17,10 @@ export type PersonEntity = {
   matchedText: string;
   confidence: number;
 };
+export type PersonCandidate = PersonEntity & {
+  movieCount: number;
+  roleMovieCount: number;
+};
 export type MetadataFilters = BaseMetadataFilters & {
   genres: string[];
   genreMode: "any" | "all";
@@ -49,7 +53,11 @@ export type QueryPlan = {
     semanticExpansions: { term: string; values: string[] }[];
     structuredGenreRanking: boolean;
   };
-  entities: { people: PersonEntity[]; genres: string[] };
+  entities: {
+    people: PersonEntity[];
+    personCandidates: PersonCandidate[];
+    genres: string[];
+  };
   filters: MetadataFilters;
   sort: {
     field: "year" | "rating" | "ratingCount";

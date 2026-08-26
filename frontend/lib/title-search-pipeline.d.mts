@@ -8,6 +8,7 @@ import type { FieldAwareIndex, FieldMatch } from "./field-aware-index.mjs";
 import type {
   CombinedWeights,
   GenreWeights,
+  PersonPopularityBoost,
 } from "./combined-title-ranker.mjs";
 import type { MetadataFilters } from "./metadata-query.mjs";
 import type { QueryPlan } from "./query-planner.mjs";
@@ -54,6 +55,7 @@ export type TitleSearchPipelineResult = Record<string, unknown> & {
       titleScore?: number;
       fieldScore?: number;
       matchReason?: Partial<FieldMatch>;
+      personPopularityBoost?: PersonPopularityBoost;
     }[];
   };
 };
