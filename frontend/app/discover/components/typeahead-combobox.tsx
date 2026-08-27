@@ -14,6 +14,16 @@ function groups(suggestions: TypeaheadSuggestions) {
   ].filter(({ items }) => items.length > 0);
 }
 
+function orderedGroups(suggestions: TypeaheadSuggestions, input: string) {
+  const available = groups(suggestions);
+  const preferredKeys = input.trim().includes(" ")
+    ? ["people", "titles", "genres"]
+    : ["titles", "people", "genres"];
+  return preferredKeys
+    .map((key) => available.find((group) => group.key === key))
+    .filter((group): group is (typeof available)[number] => Boolean(group));
+}
+
 export function TypeaheadCombobox({
   id,
   input,
@@ -33,7 +43,7 @@ export function TypeaheadCombobox({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [dismissedQuery, setDismissedQuery] = useState<string>();
   const containerRef = useRef<HTMLDivElement>(null);
-  const visibleGroups = suggestions ? groups(suggestions) : [];
+  const visibleGroups = suggestions ? orderedGroups(suggestions, input) : [];
   const visibleItems = visibleGroups.flatMap(({ items }) => items);
   const open =
     visibleItems.length > 0 &&
