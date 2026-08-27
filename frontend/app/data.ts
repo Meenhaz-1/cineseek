@@ -354,5 +354,4 @@ export const examples = [
   "intersteler",
   "dark sci-fi with philosophy",
   "horror sci-fi from the 1970s",
-  "moie with tom holland",
 ];

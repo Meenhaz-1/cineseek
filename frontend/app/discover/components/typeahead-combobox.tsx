@@ -42,6 +42,7 @@ export function TypeaheadCombobox({
   const listboxId = `${useId()}-suggestions`;
   const [activeIndex, setActiveIndex] = useState(-1);
   const [dismissedQuery, setDismissedQuery] = useState<string>();
+  const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const visibleGroups = suggestions ? orderedGroups(suggestions, input) : [];
   const visibleItems = visibleGroups.flatMap(({ items }) => items);
@@ -49,16 +50,29 @@ export function TypeaheadCombobox({
     visibleItems.length > 0 &&
     input.trim().length >= 2 &&
     suggestions?.query === input.trim().toLowerCase() &&
-    dismissedQuery !== input.trim().toLowerCase();
+    dismissedQuery !== input.trim().toLowerCase() &&
+    isFocused;
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!containerRef.current?.contains(event.target as Node))
-        setActiveIndex(-1);
+        setIsFocused(false);
     };
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Suggestions are anchored to the input, so do not leave a stale menu
+      // floating over unrelated content after the page moves.
+      setActiveIndex(-1);
+      setIsFocused(false);
+      setDismissedQuery(input.trim().toLowerCase());
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [input]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!open) return;
@@ -91,6 +105,8 @@ export function TypeaheadCombobox({
         id={id}
         value={input}
         onChange={(event) => handleInputChange(event.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoComplete="off"

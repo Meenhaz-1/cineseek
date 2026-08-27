@@ -23,9 +23,9 @@ if (JSON.stringify(actualSheets) !== JSON.stringify(expectedSheets))
 const parserSheet = workbook.getWorksheet("Parser Cases");
 const summary = workbook.getWorksheet("Summary");
 if (!parserSheet || !summary) throw new Error("Required sheet missing.");
-if (parserSheet.rowCount !== 58)
+if (parserSheet.rowCount !== 59)
   throw new Error(
-    `Expected 57 cases plus header, found ${parserSheet.rowCount}.`,
+    `Expected 58 cases plus header, found ${parserSheet.rowCount}.`,
   );
 if (parserSheet.getCell("G2").dataValidation.type !== "list")
   throw new Error("Intent validation is missing.");
