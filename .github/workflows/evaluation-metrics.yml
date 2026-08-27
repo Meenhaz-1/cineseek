@@ -50,6 +50,10 @@ jobs:
           node frontend/scripts/write-evaluation-summary.mjs
           outputs/post-merge-evaluation/report.json
 
+      - name: Enforce benchmark regression policy
+        working-directory: frontend
+        run: node scripts/assert-benchmark-regression.mjs ../outputs/post-merge-evaluation/report.json
+
       - name: Retain the benchmark evidence
         if: always()
         uses: actions/upload-artifact@v7

@@ -64,3 +64,42 @@ jobs:
           path: frontend/test-results/*.xml
           if-no-files-found: warn
           retention-days: 30
+
+  benchmark:
+    name: Benchmark regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Prepare benchmark data
+        working-directory: frontend
+        run: npm run setup
+      - name: Evaluate benchmark
+        run: >-
+          python -m cineseek evaluate data/movielens
+          outputs/query-planner-migration/unified-planner.run.jsonl
+          --corpus data/movielens/corpus.enriched.jsonl
+          --queries benchmark/queries.provisional.jsonl
+          --qrels benchmark/qrels/provisional.tsv
+          --k 10
+          --recall-k 100
+          --output outputs/pre-merge-evaluation/report.json
+      - name: Enforce benchmark regression policy
+        working-directory: frontend
+        run: node scripts/assert-benchmark-regression.mjs ../outputs/pre-merge-evaluation/report.json
+      - name: Retain benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pre-merge-benchmark-${{ github.sha }}
+          path: outputs/pre-merge-evaluation/report.json
+          if-no-files-found: warn
+          retention-days: 30

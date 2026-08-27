@@ -1,0 +1,10 @@
+{
+  "candidate_recall": 0.8,
+  "precision_at_k": 0.045,
+  "recall_at_k": 0.4,
+  "recall_at_recall_k": 0.6,
+  "mrr": 0.32,
+  "ndcg_at_k": 0.32,
+  "p95_latency_ms": 150,
+  "missing_queries": 0
+}
