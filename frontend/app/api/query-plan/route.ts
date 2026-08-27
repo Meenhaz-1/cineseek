@@ -1,6 +1,7 @@
 import { planQuery } from "../../../lib/query-planner.mjs";
 import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
 import { loadRuntimeManifest } from "../../../lib/runtime-data.mjs";
+import { internalErrorResponse } from "../../../lib/api-errors.mjs";
 
 export const runtime = "nodejs";
 
@@ -42,11 +43,6 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
-    return Response.json(
-      {
-        error: error instanceof Error ? error.message : "Query planning failed",
-      },
-      { status: 500 },
-    );
+    return internalErrorResponse("query-plan", error, "Query planning failed");
   }
 }

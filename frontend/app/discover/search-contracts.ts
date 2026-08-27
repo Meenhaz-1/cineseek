@@ -25,12 +25,6 @@ export type TypeaheadSuggestions = {
   people: TypeaheadSuggestion[];
   genres: TypeaheadSuggestion[];
 };
-export type CoachState = {
-  status: "loading" | "ready" | "unavailable";
-  paragraph?: string;
-  detail?: string;
-  model?: string;
-};
 export type ParserMismatch = {
   field: string;
   expected: string;

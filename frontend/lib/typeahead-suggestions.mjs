@@ -2,6 +2,7 @@ import { exactTitleKey } from "./exact-title-index.mjs";
 import { titleTokens } from "./title-token-index.mjs";
 
 const LEADING_ARTICLE = /^(a|an|the)\s+/;
+const catalogCache = new WeakMap();
 
 function normalize(value) {
   return exactTitleKey(value).replace(LEADING_ARTICLE, "");
@@ -69,49 +70,69 @@ function roleLabel(roles) {
   );
 }
 
-export function getTypeaheadSuggestions(
-  query,
-  { plannerIndexes, searchIndexes },
-  requestedLimit,
-) {
+function catalogFor(runtime) {
+  const cached = catalogCache.get(runtime);
+  if (cached) return cached;
+  const catalog = {
+    titles: [...runtime.searchIndexes.tokens.records.values()].map(
+      (record) => ({
+        id: record.id,
+        label: record.title,
+        type: "Movie",
+        year: record.year,
+        movieCount: 0,
+        ratingEvidence:
+          runtime.searchIndexes.ratingStats?.ratingById.get(record.id)
+            ?.ratingEvidence ?? 0,
+      }),
+    ),
+    people: runtime.plannerIndexes.people.map((person) => ({
+      id: person.id,
+      label: person.name,
+      type: roleLabel(person.roles),
+      roles: person.roles ?? [],
+      movieCount: person.movieCount ?? 0,
+    })),
+    genres: runtime.plannerIndexes.genres.map((genre) => ({
+      id: genre.id,
+      label: genre.name,
+      type: "Genre",
+      movieCount: genre.movieCount ?? 0,
+    })),
+  };
+  catalogCache.set(runtime, catalog);
+  return catalog;
+}
+
+export function getTypeaheadSuggestions(query, runtime, requestedLimit) {
   const normalizedQuery = exactTitleKey(query).trim();
   const limit = limitValue(requestedLimit);
   if (normalizedQuery.length < 2) {
     return { query: normalizedQuery, titles: [], people: [], genres: [] };
   }
 
-  const titles = [...searchIndexes.tokens.records.values()]
-    .map((record) => ({
-      id: record.id,
-      label: record.title,
-      type: "Movie",
-      year: record.year,
-      movieCount: 0,
-      ratingEvidence:
-        searchIndexes.ratingStats?.ratingById.get(record.id)?.ratingEvidence ??
-        0,
-      matchScore: titleScore(record.title, normalizedQuery),
+  const catalog = catalogFor(runtime);
+  const titles = catalog.titles
+    .map((candidate) => ({
+      ...candidate,
+      matchScore: titleScore(candidate.label, normalizedQuery),
     }))
     .filter(({ matchScore }) => matchScore > 0)
     .sort(sortSuggestions)
     .slice(0, limit)
     .map(publicSuggestion);
 
-  const people = plannerIndexes.people
+  const people = catalog.people
     .map((person) => ({
-      id: person.id,
-      label: person.name,
-      type: roleLabel(person.roles),
-      roles: person.roles ?? [],
-      movieCount: person.movieCount ?? 0,
-      matchScore: personMatchScore(person.name, normalizedQuery),
+      ...person,
+      matchScore: personMatchScore(person.label, normalizedQuery),
     }))
     .filter(({ matchScore: score }) => score > 0)
     .sort(sortSuggestions)
     .slice(0, limit)
     .map(publicSuggestion);
 
-  const genres = plannerIndexes.genres
+  const genres = catalog.genres
     .map((genre) => ({
       id: genre.id,
       label: genre.name,

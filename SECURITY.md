@@ -18,7 +18,7 @@ availability commitment.
 ## Current security boundary
 
 - Secrets belong in `frontend/.env.local`; that file is ignored by Git.
-- TMDB and OpenAI credentials are read only by server-side scripts or routes.
+- TMDB credentials are read only by server-side scripts.
 - Benchmark mutation and AI endpoints are intended for trusted local use.
 - Production authentication and role-based authorization are roadmap work and
   must be completed before exposing write-capable routes publicly.

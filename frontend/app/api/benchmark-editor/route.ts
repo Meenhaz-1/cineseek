@@ -19,6 +19,8 @@ import {
   exactTitleKey,
 } from "../../../lib/exact-title-index.mjs";
 import {
+  benchmarkWriteDisabledResponse,
+  benchmarkWritesEnabled,
   isPortfolioMode,
   portfolioWriteResponse,
 } from "../../../lib/deployment-mode.mjs";
@@ -27,6 +29,7 @@ import {
   RUNTIME_FILES,
   resolveRuntimeFile,
 } from "../../../lib/runtime-data.mjs";
+import { internalErrorResponse } from "../../../lib/api-errors.mjs";
 
 export const runtime = "nodejs";
 
@@ -196,18 +199,17 @@ export async function GET(request: Request) {
       ].sort(),
     });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Benchmark editor failed",
-      },
-      { status: 500 },
+    return internalErrorResponse(
+      "benchmark-editor",
+      error,
+      "Benchmark editor failed",
     );
   }
 }
 
 export async function POST(request: Request) {
   if (isPortfolioMode()) return portfolioWriteResponse();
+  if (!benchmarkWritesEnabled()) return benchmarkWriteDisabledResponse();
   try {
     const input = (await request.json()) as {
       expectedRevision?: unknown;
@@ -250,14 +252,11 @@ export async function POST(request: Request) {
       judgmentCount: draft.judgments.length,
     });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Benchmark draft could not be saved",
-      },
-      { status: 400 },
+    return internalErrorResponse(
+      "benchmark-editor-write",
+      error,
+      "Benchmark draft could not be saved",
+      400,
     );
   }
 }

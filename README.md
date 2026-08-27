@@ -129,6 +129,19 @@ Base mode requires no credentials. It supports title and genre search, tags,
 ratings, structured filters, ranking diagnostics, entities, benchmarks, and
 evaluation.
 
+### Local benchmark writes
+
+Benchmark editing and review-pool writes are disabled by default. Enable them
+only for local development by adding these values to `frontend/.env.local`:
+
+```env
+CINESEEK_DEPLOYMENT_MODE=local
+CINESEEK_ALLOW_BENCHMARK_WRITES=true
+```
+
+Do not add `CINESEEK_ALLOW_BENCHMARK_WRITES` to Vercel or any hosted
+environment.
+
 ### Optional TMDB enrichment
 
 Copy `frontend/.env.local.example` to `frontend/.env.local`, add your own
@@ -202,7 +215,7 @@ command.
   hybrid vector retrieval has not yet been implemented.
 - Optional actor, director, overview, and poster coverage depends on the user's
   TMDB enrichment run.
-- Write-capable benchmark, parser-test, and AI routes are local-only. Production
+- Write-capable benchmark and parser-test routes are local-only. Production
   authentication and role-based authorization are planned separately.
 - Filesystem persistence is suitable for a local build, not concurrent or
   distributed production operation.

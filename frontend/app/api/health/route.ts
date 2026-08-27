@@ -44,14 +44,12 @@ export async function GET() {
       },
     );
   } catch (error) {
+    console.error("[health]", error);
     return Response.json(
       {
         status: "unhealthy",
         deploymentMode: deploymentMode(),
-        error:
-          error instanceof Error
-            ? error.message
-            : "Runtime initialization failed",
+        error: "Runtime initialization failed",
       },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );

@@ -10,7 +10,6 @@ import {
   RESULT_PAGE_SIZE,
 } from "./search-config";
 import type {
-  CoachState,
   CombinedWeightKey,
   CombinedWeights,
   GenreWeightKey,
@@ -38,8 +37,6 @@ export function useDiscoverySearch() {
   const [hasSearched, setHasSearched] = useState(false);
   const mode: Mode = "hybrid";
   const [selected, setSelected] = useState<Movie | null>(null);
-  const [coach, setCoach] = useState<CoachState>({ status: "loading" });
-  const [coachRequest, setCoachRequest] = useState(0);
   const [parserTests, setParserTests] = useState<ParserTestState>({
     status: "idle",
   });
@@ -188,44 +185,6 @@ export function useDiscoverySearch() {
   }, [query, retrievalIsCurrent, titleRetrieval]);
 
   useEffect(() => {
-    if (!activePlan || portfolioMode) return;
-    const controller = new AbortController();
-    void fetch("/api/query-coach", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, analysis: activePlan }),
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as {
-          paragraph?: string;
-          error?: string;
-          model?: string;
-        };
-        if (!response.ok || !payload.paragraph) {
-          throw new Error(
-            payload.error || "No coaching paragraph was returned.",
-          );
-        }
-        setCoach({
-          status: "ready",
-          paragraph: payload.paragraph,
-          model: payload.model,
-        });
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError")
-          return;
-        setCoach({
-          status: "unavailable",
-          detail:
-            error instanceof Error ? error.message : "AI coach unavailable.",
-        });
-      });
-    return () => controller.abort();
-  }, [activePlan, query, coachRequest, portfolioMode]);
-
-  useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/search", {
       method: "POST",
@@ -301,13 +260,11 @@ export function useDiscoverySearch() {
     if (!nextQuery) return;
     setHasSearched(true);
     if (revealResults) focusResultsAfterLoad.current = true;
-    setCoach({ status: "loading" });
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
     setSuggestions(undefined);
     setAutocorrect(true);
-    if (nextQuery === query) setCoachRequest((value) => value + 1);
-    else setQuery(nextQuery);
+    if (nextQuery !== query) setQuery(nextQuery);
   }
 
   function showMoreResults() {
@@ -344,7 +301,6 @@ export function useDiscoverySearch() {
   function searchOriginalQuery() {
     setHasSearched(true);
     focusResultsAfterLoad.current = true;
-    setCoach({ status: "loading" });
     setCombinedUpdating(true);
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
@@ -383,7 +339,6 @@ export function useDiscoverySearch() {
     activeGenreWeights,
     activePlan,
     analysis,
-    coach,
     combinedUpdating,
     displayedResults,
     genreWeightOverrides,

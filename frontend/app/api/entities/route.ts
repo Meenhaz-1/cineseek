@@ -4,6 +4,7 @@ import {
   RUNTIME_FILES,
   resolveRuntimeFile,
 } from "../../../lib/runtime-data.mjs";
+import { internalErrorResponse } from "../../../lib/api-errors.mjs";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,8 @@ type Registry = {
 
 let registryPromise: Promise<Registry> | undefined;
 let registryKey: string | undefined;
+const collectionCache = new WeakMap<Registry, Map<string, Entity[]>>();
+const relatedMovieIdsCache = new WeakMap<Entity, Map<string, string[]>>();
 
 async function loadRegistry() {
   const registryPath = await resolveRuntimeFile(RUNTIME_FILES.registry, [
@@ -68,25 +71,76 @@ async function loadRegistry() {
 }
 
 function collectionFor(registry: Registry, kind: string) {
-  if (kind === "genre") return registry.entities.genres;
-  if (kind === "tag") return registry.entities.tags;
-  if (kind === "actor")
-    return registry.entities.people
-      .filter(({ roles }) => roles?.includes("actor"))
-      .sort(
-        (left, right) =>
-          (right.actorMovieCount ?? 0) - (left.actorMovieCount ?? 0) ||
-          left.name.localeCompare(right.name),
-      );
-  if (kind === "director")
-    return registry.entities.people
-      .filter(({ roles }) => roles?.includes("director"))
-      .sort(
-        (left, right) =>
-          (right.directorMovieCount ?? 0) - (left.directorMovieCount ?? 0) ||
-          left.name.localeCompare(right.name),
-      );
-  return registry.entities.people;
+  let cached = collectionCache.get(registry);
+  if (!cached) {
+    cached = new Map();
+    collectionCache.set(registry, cached);
+  }
+  const existing = cached.get(kind);
+  if (existing) return existing;
+  const collection =
+    kind === "genre"
+      ? registry.entities.genres
+      : kind === "tag"
+        ? registry.entities.tags
+        : registry.entities.people;
+  const result = collection
+    .filter(({ roles }) =>
+      kind === "actor"
+        ? roles?.includes("actor")
+        : kind === "director"
+          ? roles?.includes("director")
+          : true,
+    )
+    .sort((left, right) => {
+      const leftCount =
+        kind === "actor"
+          ? (left.actorMovieCount ?? 0)
+          : kind === "director"
+            ? (left.directorMovieCount ?? 0)
+            : left.movieCount;
+      const rightCount =
+        kind === "actor"
+          ? (right.actorMovieCount ?? 0)
+          : kind === "director"
+            ? (right.directorMovieCount ?? 0)
+            : right.movieCount;
+      return rightCount - leftCount || left.name.localeCompare(right.name);
+    });
+  cached.set(kind, result);
+  return result;
+}
+
+function relatedMovieIds(
+  registry: Registry,
+  entity: Entity,
+  detailKind?: string,
+) {
+  let cached = relatedMovieIdsCache.get(entity);
+  if (!cached) {
+    cached = new Map();
+    relatedMovieIdsCache.set(entity, cached);
+  }
+  const key = detailKind ?? "all";
+  const existing = cached.get(key);
+  if (existing) return existing;
+  const credits =
+    detailKind === "actor" || detailKind === "director"
+      ? (entity.credits?.filter(({ role }) => role === detailKind) ?? [])
+      : (entity.credits ?? []);
+  const ids = credits.length
+    ? [...new Set(credits.map(({ movieId }) => movieId))]
+    : entity.movieIds;
+  ids.sort(
+    (leftId, rightId) =>
+      (registry.entities.movies[rightId]?.ratingCount ?? 0) -
+        (registry.entities.movies[leftId]?.ratingCount ?? 0) ||
+      (registry.entities.movies[leftId]?.name ?? "").localeCompare(
+        registry.entities.movies[rightId]?.name ?? "",
+      ),
+  );
+  cached.set(key, ids);
+  return ids;
 }
 
 function publicEntity(entity: Entity, kind?: string) {
@@ -124,17 +178,10 @@ export async function GET(request: Request) {
       const creditByMovie = new Map(
         scopedCredits.map((credit) => [credit.movieId, credit]),
       );
-      const scopedMovieIds = scopedCredits.length
-        ? [...new Set(scopedCredits.map(({ movieId }) => movieId))]
-        : entity.movieIds;
+      const scopedMovieIds = relatedMovieIds(registry, entity, detailKind);
       const allRelatedMovies = scopedMovieIds
         .map((movieId) => registry.entities.movies[movieId])
         .filter(Boolean)
-        .sort(
-          (left, right) =>
-            (right.ratingCount ?? 0) - (left.ratingCount ?? 0) ||
-            left.name.localeCompare(right.name),
-        )
         .map((movie) => ({
           ...movie,
           relationship: creditByMovie.get(movie.id) ?? null,
@@ -200,12 +247,6 @@ export async function GET(request: Request) {
         .map((entity) => publicEntity(entity, kind)),
     });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Entity registry failed",
-      },
-      { status: 500 },
-    );
+    return internalErrorResponse("entities", error, "Entity registry failed");
   }
 }

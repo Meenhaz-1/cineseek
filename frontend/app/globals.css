@@ -189,6 +189,8 @@ input:focus-visible {
 .search {
   margin-top: 30px;
   height: 66px;
+  width: 100%;
+  min-width: 0;
   background: #f4f2eb;
   display: flex;
   align-items: center;
@@ -281,6 +283,8 @@ input:focus-visible {
 }
 .search button {
   height: 52px;
+  flex: 0 0 auto;
+  white-space: nowrap;
   background: #111;
   color: white;
   border: 0;
@@ -1181,39 +1185,6 @@ footer > a:last-child {
 .fieldReason::first-letter {
   color: var(--lime);
 }
-.aiCoach {
-  margin-top: 20px;
-  padding: 16px;
-  border: 1px solid #39422d;
-  background: linear-gradient(145deg, #171c15, #101311);
-}
-.coachTitle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--lime);
-  font: 700 9px var(--font-interface);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.coachTitle small {
-  color: #687060;
-  font: 8px var(--font-data);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.aiCoach p {
-  margin: 11px 0 0;
-  color: #c8cec3;
-  font: 11px/1.55 var(--font-display);
-}
-.aiCoach .coachLoading {
-  color: #808778;
-}
-.aiCoach .coachUnavailable {
-  color: #a6a99f;
-}
-
 /* Center the retrieval workflow and keep analysis separate from result ranking. */
 .workspace {
   display: flex;
@@ -1228,6 +1199,8 @@ footer > a:last-child {
 .debugPanel {
   order: 2;
   position: static;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 46px;
   padding: 28px;
   display: grid;
@@ -1260,10 +1233,6 @@ footer > a:last-child {
 .traceBlock[open] summary {
   margin-bottom: 14px;
 }
-.debugPanel > .aiCoach {
-  grid-column: span 8;
-  align-self: stretch;
-}
 .debugPanel > .scoreMix {
   grid-column: 1/-1;
   margin: 22px 0 0;
@@ -1286,10 +1255,6 @@ footer > a:last-child {
   .debugPanel > .debugBlock {
     grid-column: span 6;
   }
-  .debugPanel > .traceBlock,
-  .debugPanel > .aiCoach {
-    grid-column: span 6;
-  }
 }
 @media (max-width: 700px) {
   .debugPanel {
@@ -1297,8 +1262,7 @@ footer > a:last-child {
     column-gap: 0;
   }
   .debugPanel > .debugBlock,
-  .debugPanel > .traceBlock,
-  .debugPanel > .aiCoach {
+  .debugPanel > .traceBlock {
     grid-column: 1/-1;
   }
   .debugPanel > .scoreMix {
@@ -1387,14 +1351,27 @@ footer > a:last-child {
     min-height: 690px;
     padding-inline: 16px;
   }
+  .heroCopy,
+  .search,
+  .typeahead {
+    min-width: 0;
+    max-width: 100%;
+  }
   .hero h1 {
     font-size: 48px;
   }
   .heroCopy > p {
     font-size: 14px;
   }
-  .search input {
-    width: 0;
+  .search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .search input,
+  .typeahead input {
+    width: 100%;
+    min-width: 0;
   }
   .search button {
     height: 48px;
@@ -2286,6 +2263,8 @@ footer > a:last-child {
 }
 .trigramCandidates {
   margin-top: 16px;
+  min-width: 0;
+  max-width: 100%;
   padding: 16px;
   background: #0b0e0a;
   border: 1px solid #2c3428;
@@ -2309,6 +2288,8 @@ footer > a:last-child {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
   padding: 10px 11px;
   background: #151a13;
   border-left: 2px solid #687e4e;
@@ -2331,6 +2312,8 @@ footer > a:last-child {
   font: 8px var(--font-interface);
 }
 .trigramCandidates article > span {
+  min-width: 0;
+  max-width: 35%;
   flex: 0 0 auto;
   color: var(--lime);
   font: 700 11px var(--font-interface);
@@ -3191,6 +3174,8 @@ footer > a:last-child {
 /* Compact retrieval-stage disclosures keep the retrieval workbench scannable. */
 .stageDisclosure {
   margin-top: 12px !important;
+  min-width: 0;
+  max-width: 100%;
   padding: 0 !important;
   border: 1px solid #30363b;
   border-radius: 5px;
@@ -3270,6 +3255,8 @@ footer > a:last-child {
   transform: rotate(180deg);
 }
 .stageDisclosureContent {
+  min-width: 0;
+  max-width: 100%;
   padding: 22px;
 }
 .exactStage {
@@ -3951,10 +3938,6 @@ footer > a:last-child {
 .queryAdvancedContent > .traceBlock {
   grid-column: span 4;
 }
-.queryAdvancedContent > .aiCoach {
-  grid-column: span 8;
-  align-self: stretch;
-}
 .scoreMixTechnical {
   display: block;
   margin-top: 11px;
@@ -4064,8 +4047,7 @@ footer > a:last-child {
 
 @media (max-width: 900px) {
   .queryAdvancedContent > .debugBlock,
-  .queryAdvancedContent > .traceBlock,
-  .queryAdvancedContent > .aiCoach {
+  .queryAdvancedContent > .traceBlock {
     grid-column: span 6;
   }
   .rankingExplanationSummary {

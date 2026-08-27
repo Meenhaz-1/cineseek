@@ -41,7 +41,6 @@ export function DiscoveryWorkspace() {
     activeGenreWeights,
     activePlan,
     analysis,
-    coach,
     combinedUpdating,
     displayedResults,
     genreWeightOverrides,
@@ -262,10 +261,8 @@ export function DiscoveryWorkspace() {
           <QueryUnderstandingPanel
             activePlan={activePlan}
             analysis={analysis}
-            coach={coach}
             inferred={inferred}
             mode={mode}
-            portfolioMode={portfolioMode}
           />
         </div>
         <RankingExplanation

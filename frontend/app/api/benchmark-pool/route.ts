@@ -30,6 +30,8 @@ import { getSearchRuntime } from "../../../lib/search-runtime.mjs";
 import { planQuery } from "../../../lib/query-planner.mjs";
 import { runTitleSearch } from "../../../lib/title-search-pipeline.mjs";
 import {
+  benchmarkWriteDisabledResponse,
+  benchmarkWritesEnabled,
   isPortfolioMode,
   portfolioWriteResponse,
 } from "../../../lib/deployment-mode.mjs";
@@ -37,6 +39,7 @@ import {
   RUNTIME_FILES,
   resolveRuntimeFile,
 } from "../../../lib/runtime-data.mjs";
+import { internalErrorResponse } from "../../../lib/api-errors.mjs";
 
 export const runtime = "nodejs";
 
@@ -254,18 +257,17 @@ export async function GET(request: Request) {
       publicState(state, data.records, data.currentResultsByQuery, reviewerId),
     );
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Genre review pool failed",
-      },
-      { status: 500 },
+    return internalErrorResponse(
+      "benchmark-pool",
+      error,
+      "Genre review pool failed",
     );
   }
 }
 
 export async function POST(request: Request) {
   if (isPortfolioMode()) return portfolioWriteResponse();
+  if (!benchmarkWritesEnabled()) return benchmarkWriteDisabledResponse();
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
@@ -419,12 +421,11 @@ export async function POST(request: Request) {
       ),
     );
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Genre review action failed",
-      },
-      { status: 400 },
+    return internalErrorResponse(
+      "benchmark-pool-write",
+      error,
+      "Genre review action failed",
+      400,
     );
   }
 }
