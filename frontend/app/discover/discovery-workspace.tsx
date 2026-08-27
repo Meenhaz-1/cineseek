@@ -1,7 +1,7 @@
 "use client";
 
 import { MoviePoster } from "../movie-poster";
-import type { CombinedWeightKey, Mode } from "./search-contracts";
+import type { CombinedWeightKey } from "./search-contracts";
 import {
   DEFAULT_RANKER_WEIGHTS,
   GENRE_WEIGHT_CONTROLS,
@@ -98,38 +98,6 @@ export function DiscoveryWorkspace() {
       />
 
       <section className="workspace" id="discover">
-        <div className="modeRow">
-          <div>
-            <span className="sectionKicker modeKicker">
-              Retrieval strategy <span>Coming soon</span>
-            </span>
-            <h2>Search signal options</h2>
-            <p id="search-mode-status" className="modeStatus">
-              These options are a preview and do not change results yet.
-            </p>
-          </div>
-          <div
-            className="segmented"
-            role="group"
-            aria-label="Search mode (coming soon)"
-            aria-describedby="search-mode-status"
-          >
-            {(["lexical", "semantic", "hybrid"] as Mode[]).map((item) => (
-              <button
-                key={item}
-                className={mode === item ? "active" : ""}
-                aria-pressed={mode === item}
-                disabled
-                title="Coming soon"
-              >
-                <span>
-                  {item === "lexical" ? "Aa" : item === "semantic" ? "◉" : "✦"}
-                </span>
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
         <div
           className="resultsHeader"
           ref={resultsSummaryRef}
@@ -137,7 +105,7 @@ export function DiscoveryWorkspace() {
           aria-busy={titleRetrievalLoading}
         >
           <div>
-            <h2>{hasSearched ? "Top matches" : "Example matches"}</h2>
+            <h2>Top Matches</h2>
             <p>
               {hasSearched ? "For" : "Example results for"} “{query}” ·
               full-corpus combined ranking

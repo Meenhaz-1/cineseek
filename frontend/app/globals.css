@@ -599,15 +599,6 @@ input:focus-visible {
   right: -4px;
   top: 44px;
 }
-.posterWords {
-  position: absolute;
-  bottom: 32px;
-  left: 16px;
-  right: 16px;
-  font: 700 23px/0.9 var(--font-interface);
-  text-transform: uppercase;
-  letter-spacing: -0.04em;
-}
 .rank {
   position: absolute;
   top: 13px;
@@ -1202,19 +1193,19 @@ footer > a:last-child {
 .fieldReason::first-letter {
   color: var(--lime);
 }
-/* Center the retrieval workflow and keep analysis separate from result ranking. */
+/* Keep the result list close to search; follow it with explanatory panels. */
 .workspace {
   display: flex;
   flex-direction: column;
 }
 .modeRow {
-  order: 1;
+  order: 4;
 }
 .contentGrid {
   display: contents;
 }
 .debugPanel {
-  order: 2;
+  order: 5;
   position: static;
   min-width: 0;
   max-width: 100%;
@@ -1255,13 +1246,16 @@ footer > a:last-child {
   margin: 22px 0 0;
 }
 .resultsHeader {
-  order: 3;
-  margin-top: 46px;
+  order: 1;
+  margin-top: 0;
 }
 .movieRail {
-  order: 4;
+  order: 2;
   align-content: start;
   width: 100%;
+}
+.rankingExplanation {
+  order: 6;
 }
 @media (min-width: 1350px) {
   .movieRail {
@@ -1290,6 +1284,15 @@ footer > a:last-child {
   }
   .resultsHeader > span {
     margin-top: 8px;
+  }
+}
+
+@media (min-width: 701px) {
+  .hero {
+    min-height: 620px;
+  }
+  .workspace {
+    padding-top: 32px;
   }
 }
 
@@ -1732,12 +1735,8 @@ footer > a:last-child {
   opacity: 1;
 }
 .rank,
-.posterWords,
 .match {
   z-index: 3;
-}
-.hasRemotePoster .posterWords {
-  text-shadow: 0 2px 14px #000;
 }
 .hasRemotePoster:before,
 .hasRemotePoster:after {
@@ -1771,17 +1770,17 @@ footer > a:last-child {
 
 /* Stage-by-stage title retrieval workbench. */
 .titleLookupLab {
-  order: 3;
+  order: 6;
   margin-top: 30px;
   border: 1px solid #30343a;
   background: linear-gradient(145deg, #101316, #0b0d0f);
   padding: 28px;
 }
 .resultsHeader {
-  order: 4;
+  order: 1;
 }
 .movieRail {
-  order: 5;
+  order: 2;
 }
 .titleLookupHeader {
   display: flex;
@@ -4388,7 +4387,7 @@ output,
   }
 }
 .resultPagination {
-  order: 6;
+  order: 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6016,10 +6015,6 @@ output,
 .resultsHeader {
   scroll-margin-top: 82px;
 }
-.resultsHeader:focus {
-  outline: 3px solid var(--lime);
-  outline-offset: 8px;
-}
 .movieCard {
   display: flex;
   flex-direction: column;
@@ -6028,7 +6023,7 @@ output,
   order: 0;
 }
 .cardHeading {
-  order: 1;
+  order: -1;
   padding: 13px 3px 0;
 }
 .cardHeading h3 {
