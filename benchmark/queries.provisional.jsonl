@@ -78,3 +78,5 @@
 {"_id":"q078","text":"colourful stop-motion feeling family movie","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
 {"_id":"q079","text":"quiet movie about loneliness in Tokyo","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
 {"_id":"q080","text":"fast post-apocalyptic chase with a woman warrior","metadata":{"category":"mixed_intent","label_status":"provisional_generated"}}
+{"_id":"q081","text":"nolan","metadata":{"category":"person_intent","label_status":"provisional_generated","notes":"Ambiguous surname should prioritize Christopher Nolan's catalog before other Nolan matches."}}
+{"_id":"q082","text":"lord of the rings","metadata":{"category":"title_phrase","label_status":"provisional_generated","notes":"Title phrase should outrank incidental cast and tag matches containing lord."}}

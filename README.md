@@ -197,7 +197,7 @@ command.
 ## Current limitations and roadmap
 
 - Complete human-reviewed judgments are available only through an in-progress
-  genre review workflow; the 80-query qrels remain provisional.
+  genre review workflow; the 82-query qrels remain provisional.
 - Retrieval is primarily lexical, field-aware, and metadata-aware. Semantic or
   hybrid vector retrieval has not yet been implemented.
 - Optional actor, director, overview, and poster coverage depends on the user's

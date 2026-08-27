@@ -35,7 +35,7 @@ const rows = [
 const markdown = [
   "## CineSeek evaluation metrics",
   "",
-  "These scores use the 80-query provisional benchmark and public MovieLens data. They are regression signals, not human relevance judgments.",
+  "These scores use the 82-query provisional benchmark and public MovieLens data. They are regression signals, not human relevance judgments.",
   "",
   "| Metric | Result |",
   "| --- | ---: |",
