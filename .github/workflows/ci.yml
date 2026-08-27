@@ -17,7 +17,16 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest
+      - name: Run Python tests
+        run: python -m pytest --junitxml=test-results/pytest.xml
+      - name: Upload Python test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-test-results-${{ github.sha }}
+          path: test-results/pytest.xml
+          if-no-files-found: warn
+          retention-days: 30
 
   frontend:
     runs-on: ubuntu-latest
@@ -30,10 +39,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - working-directory: frontend
         run: npm ci
+      - name: Prepare frontend test results
+        working-directory: frontend
+        run: mkdir -p test-results
       - working-directory: frontend
-        run: npm run test:title-index
+        run: npm run test:title-index -- --test-reporter=junit --test-reporter-destination=test-results/title-index.xml
       - working-directory: frontend
-        run: npm run test:tmdb
+        run: npm run test:tmdb -- --test-reporter=junit --test-reporter-destination=test-results/tmdb.xml
       - working-directory: frontend
         run: npm run lint
       - working-directory: frontend
@@ -42,3 +54,11 @@ jobs:
         run: npm run build
       - working-directory: frontend
         run: npm run scan:secrets
+      - name: Upload frontend test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-test-results-${{ github.sha }}
+          path: frontend/test-results/*.xml
+          if-no-files-found: warn
+          retention-days: 30

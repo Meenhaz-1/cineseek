@@ -218,6 +218,7 @@ export function fullResultMovie(result: FullSearchResult): Movie {
   if (teachingMovie)
     return {
       ...teachingMovie,
+      posterPath: result.posterPath ?? teachingMovie.posterPath,
       matchReason: result.matchReason,
       personPopularityBoost: result.personPopularityBoost,
       relevanceScore: result.score,

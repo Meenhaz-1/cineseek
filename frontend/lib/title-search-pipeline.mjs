@@ -231,6 +231,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
       : retrievalQuery || normalizedQuery
   ).trim();
   const hasFieldQuery = fieldQuery.length > 0;
+  const exactOnly = exactHit && !hasResidualQuery && !hasFieldQuery;
   const isStructuredGenreDiscovery =
     queryPlan?.routes.structuredGenreRanking === true;
   const hasGenreTitleFallback =
@@ -262,7 +263,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
   let candidateMergeMs = 0;
   let scoringMs = 0;
 
-  if (!exactHit && (hasResidualQuery || hasFieldQuery || hasMetadataFilters)) {
+  if (!exactOnly && (hasResidualQuery || hasFieldQuery || hasMetadataFilters)) {
     const tokenStartedAt = performance.now();
     const tokenResult = hasResidualQuery
       ? lookupTitleTokens(pipeline.tokens, retrievalQuery, previewLimit)
@@ -343,7 +344,6 @@ export function runTitleSearch(pipeline, input, options = {}) {
         );
       }),
     );
-
     const mergeStartedAt = performance.now();
     const tokenCandidateIds = new Set(tokenResult.candidateIds);
     const fieldCandidateIds = new Set(fieldResult.candidateIds);
@@ -359,6 +359,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
         ]
       : [
           ...new Set([
+            ...exactTitleIds,
             ...tokenResult.candidateIds,
             ...trigramResult.candidateIds,
             ...fieldResult.candidateIds,
@@ -380,7 +381,6 @@ export function runTitleSearch(pipeline, input, options = {}) {
       truncated: candidateIds.length > previewLimit,
     };
     candidateMergeMs = roundedMs(mergeStartedAt);
-
     const scoringStartedAt = performance.now();
     if (hasResidualQuery) {
       fuzzyScoring = scoreCharacterTrigramCandidates(
@@ -461,7 +461,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
     scoringMs,
     totalMs: roundedMs(totalStartedAt),
   };
-  let rankedResults = exactHit
+  let rankedResults = exactOnly
     ? matches.slice(0, rankLimit).map(({ id, title, year }) => ({
         id,
         title,
@@ -495,6 +495,25 @@ export function runTitleSearch(pipeline, input, options = {}) {
           personPopularityBoost,
         }),
       ) ?? []);
+  if (!exactOnly && exactHit) {
+    const exactIds = new Set(matches.map(({ id }) => id));
+    const exactRankedResults = matches.map(({ id, title, year }) => ({
+      id,
+      title,
+      year,
+      score: 1,
+      matchReason: {
+        field: "title",
+        label: "Title",
+        value: title,
+        matchType: "exact_value",
+      },
+    }));
+    rankedResults = [
+      ...exactRankedResults,
+      ...rankedResults.filter(({ id }) => !exactIds.has(id)),
+    ].slice(0, rankLimit);
+  }
   if (resolvedInput.sort?.field === "year") {
     const direction = resolvedInput.sort.direction === "asc" ? 1 : -1;
     rankedResults = [...rankedResults].sort(
@@ -523,7 +542,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
       filterMs: metadataFilterMs,
     },
     exact: { lookupKey, hit: exactHit, matches, lookupMs: exactLookupMs },
-    tokenLookup: exactHit
+    tokenLookup: exactOnly
       ? {
           skipped: true,
           reason: "An exact title matched, so candidate generation stopped.",
@@ -535,7 +554,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
               "Structured parsing consumed every meaningful term, so token title retrieval was skipped.",
           }
         : { skipped: false, ...tokenLookup, lookupMs: tokenLookupMs },
-    fieldLookup: exactHit
+    fieldLookup: exactOnly
       ? {
           skipped: true,
           reason:
@@ -544,7 +563,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
       : !hasFieldQuery
         ? { skipped: true, reason: "There is no searchable field text." }
         : { skipped: false, ...fieldLookup, lookupMs: fieldLookupMs },
-    trigramLookup: exactHit
+    trigramLookup: exactOnly
       ? {
           skipped: true,
           reason:
@@ -557,7 +576,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
               "There is no residual title text, so trigram candidate generation was skipped.",
           }
         : { skipped: false, ...trigramLookup, lookupMs: trigramLookupMs },
-    combinedCandidates: exactHit
+    combinedCandidates: exactOnly
       ? { skipped: true, reason: "Exact title matched." }
       : !hasResidualQuery && !hasFieldQuery && !hasMetadataFilters
         ? {
@@ -566,7 +585,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
               "No candidates were generated for this structured-only query.",
           }
         : { skipped: false, ...combinedCandidates },
-    fuzzyScoring: exactHit
+    fuzzyScoring: exactOnly
       ? {
           skipped: true,
           reason: "An exact title matched, so fuzzy scoring was unnecessary.",
@@ -577,7 +596,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
             reason: "There are no residual title candidates to score.",
           }
         : { skipped: false, ...fuzzyScoring },
-    editScoring: exactHit
+    editScoring: exactOnly
       ? {
           skipped: true,
           reason:
@@ -589,7 +608,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
             reason: "There are no residual title candidates to score.",
           }
         : { skipped: false, ...editScoring },
-    tokenCoverageScoring: exactHit
+    tokenCoverageScoring: exactOnly
       ? {
           skipped: true,
           reason:
@@ -601,7 +620,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
             reason: "There are no residual title candidates to score.",
           }
         : { skipped: false, ...tokenCoverageScoring },
-    orderedTokenProximityScoring: exactHit
+    orderedTokenProximityScoring: exactOnly
       ? {
           skipped: true,
           reason:
@@ -613,7 +632,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
             reason: "There are no residual title candidates to score.",
           }
         : { skipped: false, ...orderedTokenProximityScoring },
-    combinedScoring: exactHit
+    combinedScoring: exactOnly
       ? {
           skipped: true,
           reason:

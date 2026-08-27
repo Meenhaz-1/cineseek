@@ -573,7 +573,10 @@ function recurringTitlePhraseCorrection(target, indexes) {
     replacementText: best.phrase,
     entityType: "title",
     confidence: Number(best.similarity.toFixed(3)),
-    policy: "automatic",
+    policy:
+      best.tokenDistances.filter((distance) => distance > 0).length > 1
+        ? "automatic"
+        : "suggest",
   };
 }
 
