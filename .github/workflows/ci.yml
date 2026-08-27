@@ -45,9 +45,9 @@ jobs:
         working-directory: frontend
         run: mkdir -p test-results
       - working-directory: frontend
-        run: npm run test:title-index -- --test-reporter=junit --test-reporter-destination=test-results/title-index.xml
+        run: npm run test:title-index:ci
       - working-directory: frontend
-        run: npm run test:tmdb -- --test-reporter=junit --test-reporter-destination=test-results/tmdb.xml
+        run: npm run test:tmdb:ci
       - working-directory: frontend
         run: npm run lint
       - working-directory: frontend
