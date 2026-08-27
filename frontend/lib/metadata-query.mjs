@@ -120,6 +120,10 @@ export function parseMetadataQuery(normalizedQuery) {
       ? "all"
       : "any";
   const decade = normalizedQuery.match(/\b((?:19|20)\d0)s\b/);
+  const fromRange = normalizedQuery.match(
+    /\bfrom\s+((?:19|20)\d{2})\s+to\s+((?:19|20)\d{2})\b/,
+  );
+  const fromYear = normalizedQuery.match(/\bfrom\s+((?:19|20)\d{2})\b/);
   const after = normalizedQuery.match(/\b(after|since)\s+((?:19|20)\d{2})\b/);
   const before = normalizedQuery.match(/\bbefore\s+((?:19|20)\d{2})\b/);
   const ratingMatch = normalizedQuery.match(
@@ -134,6 +138,12 @@ export function parseMetadataQuery(normalizedQuery) {
   if (decade) {
     yearMin = Number(decade[1]);
     yearMax = yearMin + 9;
+  } else if (fromRange) {
+    yearMin = Number(fromRange[1]);
+    yearMax = Number(fromRange[2]);
+  } else if (fromYear) {
+    yearMin = Number(fromYear[1]);
+    yearMax = yearMin;
   } else {
     if (after) yearMin = Number(after[2]) + (after[1] === "after" ? 1 : 0);
     if (before) yearMax = Number(before[1]) - 1;
@@ -151,6 +161,7 @@ export function parseMetadataQuery(normalizedQuery) {
     ratingCountMin: ratingCountMatch ? Number(ratingCountMatch[1]) : undefined,
     matches: {
       decade,
+      from: fromRange ?? fromYear,
       after,
       before,
       rating: ratingMatch,

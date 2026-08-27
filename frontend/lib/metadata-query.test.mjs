@@ -17,6 +17,21 @@ test("parses q062 metadata constraints without confusing rating count with avera
   assert.equal(parsed.ratingCountMin, 100);
 });
 
+test("parses a standalone from-year as an exact year filter", () => {
+  const parsed = parseMetadataQuery(
+    "shortlist popular adventure movies from 1995",
+  );
+  assert.deepEqual(parsed.genres, ["Adventure"]);
+  assert.equal(parsed.yearMin, 1995);
+  assert.equal(parsed.yearMax, 1995);
+});
+
+test("parses a from-to year range", () => {
+  const parsed = parseMetadataQuery("adventure movies from 1995 to 2005");
+  assert.equal(parsed.yearMin, 1995);
+  assert.equal(parsed.yearMax, 2005);
+});
+
 test("uses soft ANY matching for an unconnected multi-genre discovery phrase", () => {
   const parsed = parseMetadataQuery("science fiction thriller");
   assert.deepEqual(parsed.genres, ["Sci-Fi", "Thriller"]);

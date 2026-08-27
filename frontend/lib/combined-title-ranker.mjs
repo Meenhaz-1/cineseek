@@ -47,11 +47,17 @@ export const BAYESIAN_RATING_PRIOR = 20;
 export const MIN_RATING_COUNT_FOR_AVERAGE = 5;
 export const PERSON_POPULARITY_WEIGHT = 0.06;
 export const PERSON_RATING_EVIDENCE_WEIGHT = 0.01;
+export const TITLE_PREFIX_CLUSTER_MIN = 3;
+export const TITLE_PREFIX_CLUSTER_WEIGHT = 0.08;
+
+function normalizedTitleForMatch(title) {
+  return exactTitleKey(title).replace(/^(a|an|the)\s+/i, "");
+}
 
 function titlePhrasePriority(title, query) {
   const normalizedQuery = exactTitleKey(query);
   if (normalizedQuery.split(" ").length < 2) return 0;
-  const normalizedTitle = exactTitleKey(title).replace(/^(a|an|the)\s+/i, "");
+  const normalizedTitle = normalizedTitleForMatch(title);
   return normalizedTitle === normalizedQuery ||
     normalizedTitle.startsWith(`${normalizedQuery} `)
     ? 1
@@ -162,6 +168,17 @@ export function scoreCombinedTitleCandidates(
   const blendFieldEvidence = fieldMatches instanceof Map;
   const personCandidates = rankingContext.personCandidates ?? [];
   const personIntentRanking = rankingContext.personIntentRanking === true;
+  const normalizedQueryForIntent = exactTitleKey(normalizedQuery);
+  const titlePrefixClusterSize = candidateIds.reduce((count, id) => {
+    const record = records.get(id);
+    if (!record) return count;
+    const title = normalizedTitleForMatch(record.title);
+    return title.startsWith(`${normalizedQueryForIntent} `) ? count + 1 : count;
+  }, 0);
+  const titleIntentRanking =
+    personIntentRanking &&
+    normalizedQueryForIntent.split(" ").length === 1 &&
+    titlePrefixClusterSize >= TITLE_PREFIX_CLUSTER_MIN;
   const isStructuredGenreDiscovery =
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
@@ -243,6 +260,15 @@ export function scoreCombinedTitleCandidates(
         : blendFieldEvidence
           ? Number((titleScore * 0.35 + fieldScore * 0.65).toFixed(6))
           : titleScore;
+      const titlePrefixMatch =
+        normalizedQueryForIntent.split(" ").length === 1 &&
+        normalizedTitleForMatch(record.title).startsWith(
+          `${normalizedQueryForIntent} `,
+        );
+      const titleIntentBoost =
+        titleIntentRanking && titlePrefixMatch
+          ? TITLE_PREFIX_CLUSTER_WEIGHT
+          : 0;
       const genreFocus =
         requestedGenres.length > 0
           ? metadataGenreMatchCount /
@@ -295,7 +321,9 @@ export function scoreCombinedTitleCandidates(
         : 0;
       const combinedScore = isStructuredGenreDiscovery
         ? structuredGenreScore
-        : lexicalCombinedScore;
+        : Number(
+            Math.min(1, lexicalCombinedScore + titleIntentBoost).toFixed(6),
+          );
       return {
         ...titleCandidate,
         titleScore,
@@ -311,6 +339,8 @@ export function scoreCombinedTitleCandidates(
         structuredGenreContributions,
         structuredGenreScore,
         isExactTitleMatch,
+        titlePrefixMatch,
+        titleIntentBoost,
         titlePhrasePriority: titlePhrasePriority(record.title, normalizedQuery),
       };
     })
@@ -423,6 +453,11 @@ export function scoreCombinedTitleCandidates(
         };
       })
       .sort((left, right) => {
+        if (titleIntentRanking) {
+          const titleClusterPriority =
+            Number(right.titlePrefixMatch) - Number(left.titlePrefixMatch);
+          if (titleClusterPriority) return titleClusterPriority;
+        }
         if (personIntentRanking) {
           const leftPersonRank =
             left.personPopularityBoost?.personIntentRank ?? Infinity;
@@ -473,6 +508,10 @@ export function scoreCombinedTitleCandidates(
       minimumAverageRatingCount: MIN_RATING_COUNT_FOR_AVERAGE,
       personPopularityWeight: PERSON_POPULARITY_WEIGHT,
       personRatingEvidenceWeight: PERSON_RATING_EVIDENCE_WEIGHT,
+      titlePrefixClusterMinimum: TITLE_PREFIX_CLUSTER_MIN,
+      titlePrefixClusterSize,
+      titlePrefixClusterWeight: TITLE_PREFIX_CLUSTER_WEIGHT,
+      titleIntentRanking,
       personIntentRanking,
       personPopularityApplied: maximumPersonMovieCount > 0,
     },

@@ -26,6 +26,9 @@
 html {
   scroll-behavior: smooth;
 }
+main {
+  min-width: 0;
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -231,6 +234,8 @@ input:focus-visible {
   right: -12px;
   max-height: min(440px, 60vh);
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 8px;
   border: 1px solid #ffffff24;
   border-radius: 8px;
@@ -253,7 +258,7 @@ input:focus-visible {
 .typeaheadGroup button {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
   padding: 9px 8px;
@@ -263,6 +268,15 @@ input:focus-visible {
   color: #f3f2ed;
   text-align: left;
   cursor: pointer;
+}
+.typeaheadGroup button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
 }
 .typeaheadGroup button:hover,
 .typeaheadGroup button.active {
@@ -278,8 +292,9 @@ input:focus-visible {
 .stickySearchDock .typeaheadMenu {
   top: auto;
   bottom: calc(100% + 12px);
-  left: -42px;
-  right: -42px;
+  left: -10px;
+  right: -10px;
+  max-width: calc(100vw - 24px);
 }
 .search button {
   height: 52px;
@@ -1042,7 +1057,9 @@ footer > a:last-child {
     display: none;
   }
   .search input {
-    font-size: 13px;
+    /* iOS Safari zooms focused inputs below 16px and may not restore the
+       visual viewport after the keyboard closes. */
+    font-size: 16px;
   }
   .search button {
     padding: 0 15px;
@@ -1376,9 +1393,6 @@ footer > a:last-child {
   .search button {
     height: 48px;
     padding-inline: 12px;
-  }
-  .examples {
-    align-items: flex-start;
   }
   .workspace,
   .metrics,
@@ -2571,7 +2585,7 @@ footer > a:last-child {
   outline: 0;
   background: transparent;
   color: #f3f2ed;
-  font: 14px var(--font-display);
+  font: 16px var(--font-display);
 }
 .stickySearchDock input::placeholder {
   color: #747a7c;
@@ -2602,15 +2616,23 @@ footer > a:last-child {
 }
 @media (max-width: 700px) {
   body {
-    padding-bottom: 78px;
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+    overflow-x: clip;
   }
   .stickySearchDock {
     top: auto;
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
     width: calc(100vw - 24px);
     height: 58px;
   }
   .stickySearchMode {
+    display: none;
+  }
+}
+@media (max-width: 700px) and (max-height: 600px) {
+  /* When the on-screen keyboard compresses the viewport, do not let the
+     inactive dock compete with the field currently being edited. */
+  .stickySearchDock:not(:focus-within) {
     display: none;
   }
 }
@@ -2624,6 +2646,40 @@ footer > a:last-child {
   }
   .stickySearchDock button {
     padding-inline: 13px;
+  }
+  .stickySearchDock .typeaheadMenu {
+    left: -13px;
+    right: -13px;
+    max-height: min(360px, 55vh);
+  }
+}
+
+/* Keep mobile diagnostics inside the page; only data tables scroll sideways. */
+@media (max-width: 700px) {
+  .debugPanel,
+  .lookupTrace,
+  .stageDisclosureContent,
+  .combinedPreview,
+  .candidatePreview,
+  .trigramCandidates {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .postingsTable,
+  .fuzzyScoreTable {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  .postingsHeader,
+  .postingsRow,
+  .fuzzyScoreRow {
+    min-width: 520px;
+  }
+  .lookupTrace code,
+  .stageDisclosureContent code {
+    overflow-wrap: anywhere;
   }
 }
 

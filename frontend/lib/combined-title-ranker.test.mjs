@@ -561,6 +561,77 @@ test("matches Christopher Nolan ahead of Nolan North and exposes rating evidence
   assert.equal(result.rankingContext.personIntentRanking, true);
 });
 
+test("title prefix clusters outrank incidental person matches for ambiguous words", () => {
+  const records = new Map([
+    [
+      "hp-1",
+      {
+        id: "hp-1",
+        title: "Harry Potter and the Sorcerer's Stone",
+        genres: [],
+      },
+    ],
+    [
+      "hp-2",
+      {
+        id: "hp-2",
+        title: "Harry Potter and the Chamber of Secrets",
+        genres: [],
+      },
+    ],
+    [
+      "hp-3",
+      {
+        id: "hp-3",
+        title: "Harry Potter and the Prisoner of Azkaban",
+        genres: [],
+      },
+    ],
+    ["person-film", { id: "person-film", title: "Alpha Dog", genres: [] }],
+  ]);
+  const result = scoreCombinedTitleCandidates(
+    records,
+    [...records.keys()],
+    "harry",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    {
+      fieldMatches: new Map([
+        [
+          "person-film",
+          {
+            score: 0.95,
+            exactEntityMatch: true,
+            bestMatch: {
+              field: "cast",
+              value: "Harry Dean Stanton",
+              score: 0.95,
+            },
+            matches: [
+              { field: "cast", value: "Harry Dean Stanton", score: 0.95 },
+            ],
+          },
+        ],
+      ]),
+      personCandidates: [
+        {
+          id: "person:harry-dean-stanton",
+          name: "Harry Dean Stanton",
+          role: "actor",
+          movieCount: 24,
+          roleMovieCount: 24,
+        },
+      ],
+      personIntentRanking: true,
+    },
+  );
+
+  assert.equal(result.candidatesPreview[0].id, "hp-1");
+  assert.equal(result.rankingContext.titleIntentRanking, true);
+  assert.equal(result.rankingContext.titlePrefixClusterSize, 3);
+  assert.equal(result.candidatesPreview[0].titleIntentBoost, 0.08);
+});
+
 test("rating volume cannot overwhelm a stronger person catalog signal", () => {
   const personRecords = new Map([
     [

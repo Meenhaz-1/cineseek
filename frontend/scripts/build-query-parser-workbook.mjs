@@ -310,6 +310,18 @@ const cases = [
       status: "Planned",
     },
   ),
+  testCase(
+    "FILTER-009",
+    "Years and ratings",
+    "shortlist popular adventure movies from 1995",
+    "shortlist popular adventure movies from 1995",
+    {
+      intent: "filtered_discovery",
+      genres: "Adventure",
+      yearMin: 1995,
+      yearMax: 1995,
+    },
+  ),
 
   testCase("SORT-001", "Sorting", "latest comedy", "latest comedy", {
     intent: "sorted_discovery",
