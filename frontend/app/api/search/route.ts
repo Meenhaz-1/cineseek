@@ -11,6 +11,7 @@ import {
   type CombinedWeights,
   type GenreWeights,
 } from "../../../lib/combined-title-ranker.mjs";
+import { internalErrorResponse } from "../../../lib/api-errors.mjs";
 
 export const runtime = "nodejs";
 
@@ -151,9 +152,6 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Search failed" },
-      { status: 500 },
-    );
+    return internalErrorResponse("search", error, "Search failed");
   }
 }

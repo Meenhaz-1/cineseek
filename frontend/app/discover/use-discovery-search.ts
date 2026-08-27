@@ -10,7 +10,6 @@ import {
   RESULT_PAGE_SIZE,
 } from "./search-config";
 import type {
-  CoachState,
   CombinedWeightKey,
   CombinedWeights,
   GenreWeightKey,
@@ -20,6 +19,8 @@ import type {
   ParserTestState,
   TitleRetrieval,
   TitleRetrievalState,
+  TypeaheadSuggestion,
+  TypeaheadSuggestions,
 } from "./search-contracts";
 import {
   analysisFromPlan,
@@ -36,8 +37,6 @@ export function useDiscoverySearch() {
   const [hasSearched, setHasSearched] = useState(false);
   const mode: Mode = "hybrid";
   const [selected, setSelected] = useState<Movie | null>(null);
-  const [coach, setCoach] = useState<CoachState>({ status: "loading" });
-  const [coachRequest, setCoachRequest] = useState(0);
   const [parserTests, setParserTests] = useState<ParserTestState>({
     status: "idle",
   });
@@ -52,6 +51,7 @@ export function useDiscoverySearch() {
   const [combinedUpdating, setCombinedUpdating] = useState(false);
   const [resultLimit, setResultLimit] = useState(RESULT_PAGE_SIZE);
   const [showStickySearch, setShowStickySearch] = useState(false);
+  const [suggestions, setSuggestions] = useState<TypeaheadSuggestions>();
   const heroSearchRef = useRef<HTMLFormElement>(null);
   const resultsSummaryRef = useRef<HTMLDivElement>(null);
   const focusResultsAfterLoad = useRef(false);
@@ -111,6 +111,41 @@ export function useDiscoverySearch() {
     .slice(0, 4);
 
   useEffect(() => {
+    const trimmedInput = input.trim();
+    if (trimmedInput.length < 2) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      void fetch(
+        `/api/suggestions?q=${encodeURIComponent(trimmedInput)}&limit=6`,
+        {
+          signal: controller.signal,
+        },
+      )
+        .then(async (response) => {
+          const payload = (await response.json()) as
+            TypeaheadSuggestions | { error?: string };
+          if (!response.ok || !("query" in payload))
+            throw new Error(
+              "error" in payload
+                ? payload.error || "Suggestions unavailable."
+                : "Suggestions unavailable.",
+            );
+          if (payload.query === trimmedInput.toLowerCase())
+            setSuggestions(payload);
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError")
+            return;
+          setSuggestions(undefined);
+        });
+    }, 200);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [input]);
+
+  useEffect(() => {
     const heroSearch = heroSearchRef.current;
     if (!heroSearch) return;
     const observer = new IntersectionObserver(([entry]) =>
@@ -148,44 +183,6 @@ export function useDiscoverySearch() {
       block: "start",
     });
   }, [query, retrievalIsCurrent, titleRetrieval]);
-
-  useEffect(() => {
-    if (!activePlan || portfolioMode) return;
-    const controller = new AbortController();
-    void fetch("/api/query-coach", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, analysis: activePlan }),
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as {
-          paragraph?: string;
-          error?: string;
-          model?: string;
-        };
-        if (!response.ok || !payload.paragraph) {
-          throw new Error(
-            payload.error || "No coaching paragraph was returned.",
-          );
-        }
-        setCoach({
-          status: "ready",
-          paragraph: payload.paragraph,
-          model: payload.model,
-        });
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError")
-          return;
-        setCoach({
-          status: "unavailable",
-          detail:
-            error instanceof Error ? error.message : "AI coach unavailable.",
-        });
-      });
-    return () => controller.abort();
-  }, [activePlan, query, coachRequest, portfolioMode]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -263,12 +260,11 @@ export function useDiscoverySearch() {
     if (!nextQuery) return;
     setHasSearched(true);
     if (revealResults) focusResultsAfterLoad.current = true;
-    setCoach({ status: "loading" });
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
+    setSuggestions(undefined);
     setAutocorrect(true);
-    if (nextQuery === query) setCoachRequest((value) => value + 1);
-    else setQuery(nextQuery);
+    if (nextQuery !== query) setQuery(nextQuery);
   }
 
   function showMoreResults() {
@@ -297,10 +293,14 @@ export function useDiscoverySearch() {
     chooseQuery(nextQuery, true);
   }
 
+  function selectTypeaheadSuggestion(suggestion: TypeaheadSuggestion) {
+    setInput(suggestion.label);
+    chooseQuery(suggestion.label, true);
+  }
+
   function searchOriginalQuery() {
     setHasSearched(true);
     focusResultsAfterLoad.current = true;
-    setCoach({ status: "loading" });
     setCombinedUpdating(true);
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
@@ -339,7 +339,6 @@ export function useDiscoverySearch() {
     activeGenreWeights,
     activePlan,
     analysis,
-    coach,
     combinedUpdating,
     displayedResults,
     genreWeightOverrides,
@@ -370,8 +369,10 @@ export function useDiscoverySearch() {
     showStickySearch,
     submit,
     submitSticky,
+    selectTypeaheadSuggestion,
     suggestedQuery,
     suggestedQueryLabel,
+    suggestions,
     titleRetrieval,
     titleRetrievalLoading,
     updateGenreWeight,

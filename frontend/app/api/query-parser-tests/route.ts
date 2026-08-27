@@ -7,6 +7,7 @@ import {
   RUNTIME_FILES,
   resolveRuntimeFile,
 } from "../../../lib/runtime-data.mjs";
+import { internalErrorResponse } from "../../../lib/api-errors.mjs";
 
 export const runtime = "nodejs";
 
@@ -231,14 +232,10 @@ export async function POST() {
       results,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Parser cases could not be executed.",
-      },
-      { status: 500 },
+    return internalErrorResponse(
+      "query-parser-tests",
+      error,
+      "Parser cases could not be executed.",
     );
   }
 }

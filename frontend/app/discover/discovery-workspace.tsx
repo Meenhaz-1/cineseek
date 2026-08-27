@@ -41,7 +41,6 @@ export function DiscoveryWorkspace() {
     activeGenreWeights,
     activePlan,
     analysis,
-    coach,
     combinedUpdating,
     displayedResults,
     genreWeightOverrides,
@@ -70,8 +69,10 @@ export function DiscoveryWorkspace() {
     showStickySearch,
     submit,
     submitSticky,
+    selectTypeaheadSuggestion,
     suggestedQuery,
     suggestedQueryLabel,
+    suggestions,
     titleRetrieval,
     titleRetrievalLoading,
     updateGenreWeight,
@@ -92,6 +93,8 @@ export function DiscoveryWorkspace() {
         onAcceptSuggestion={acceptSuggestion}
         onSearchOriginal={searchOriginalQuery}
         onRunExample={runExample}
+        suggestions={suggestions}
+        onSelectSuggestion={selectTypeaheadSuggestion}
       />
 
       <section className="workspace" id="discover">
@@ -258,10 +261,8 @@ export function DiscoveryWorkspace() {
           <QueryUnderstandingPanel
             activePlan={activePlan}
             analysis={analysis}
-            coach={coach}
             inferred={inferred}
             mode={mode}
-            portfolioMode={portfolioMode}
           />
         </div>
         <RankingExplanation
@@ -2478,6 +2479,8 @@ export function DiscoveryWorkspace() {
           mode={mode}
           onInputChange={setInput}
           onSubmit={submitSticky}
+          suggestions={suggestions}
+          onSelectSuggestion={selectTypeaheadSuggestion}
         />
       )}
 

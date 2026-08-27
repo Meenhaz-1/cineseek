@@ -1,5 +1,5 @@
 import type { QueryPlan } from "../../../lib/query-planner.mjs";
-import type { CoachState, Mode } from "../search-contracts";
+import type { Mode } from "../search-contracts";
 import type { QueryAnalysis } from "../search-presenters";
 
 function TechnicalLabel({ children }: { children: string }) {
@@ -20,17 +20,13 @@ function intentLabel(intent: QueryAnalysis["intent"]) {
 export function QueryUnderstandingPanel({
   activePlan,
   analysis,
-  coach,
   inferred,
   mode,
-  portfolioMode,
 }: {
   activePlan?: QueryPlan;
   analysis: QueryAnalysis;
-  coach: CoachState;
   inferred: string[];
   mode: Mode;
-  portfolioMode: boolean;
 }) {
   const hasFilters =
     analysis.yearMin !== undefined ||
@@ -362,22 +358,6 @@ export function QueryUnderstandingPanel({
               ))}
             </ol>
           </details>
-
-          {!portfolioMode && (
-            <div className="aiCoach" aria-live="polite">
-              <div className="coachTitle">
-                <span>✦ AI explanation</span>
-                {coach.model && <small>{coach.model}</small>}
-              </div>
-              {coach.status === "loading" && (
-                <p className="coachLoading">Preparing a short explanation…</p>
-              )}
-              {coach.status === "ready" && <p>{coach.paragraph}</p>}
-              {coach.status === "unavailable" && (
-                <p className="coachUnavailable">{coach.detail}</p>
-              )}
-            </div>
-          )}
 
           <div className="scoreMix">
             <div>

@@ -1,8 +1,7 @@
 # Deploy CineSeek to Vercel
 
 CineSeek deploys as a read-only portfolio application. Search and entity APIs
-use a versioned private Vercel Blob release; benchmark writes and the AI coach
-remain local-only.
+use a versioned private Vercel Blob release; benchmark writes are local-only.
 
 ## 1. Build the enriched data locally
 
@@ -57,7 +56,7 @@ CINESEEK_DEPLOYMENT_MODE=portfolio
 NEXT_PUBLIC_CINESEEK_DEPLOYMENT_MODE=portfolio
 ```
 
-Do not add `TMDB_API_KEY`, `TMDB_READ_TOKEN`, or `OPENAI_API_KEY` to the public
+Do not add `TMDB_API_KEY` or `TMDB_READ_TOKEN` to the public
 deployment. `vercel.json` runs `npm run vercel-build`, which downloads the
 pinned release, verifies every SHA-256 hash, and packages `.runtime-data` with
 the required server functions.
@@ -73,9 +72,22 @@ Before promoting it, verify:
 - Posters load from `image.tmdb.org`.
 - The benchmark is visibly read-only.
 - POST requests to `/api/benchmark-editor` and `/api/benchmark-pool` return 403.
-- `/api/query-coach` returns 404 and no OpenAI credential is present.
 - Browser console, accessibility checks, and Vercel function logs show no
   errors.
+
+## Local benchmark writes
+
+Benchmark editor and review-pool writes are disabled by default. To enable them
+for local development only, add both lines to `frontend/.env.local`:
+
+```dotenv
+CINESEEK_DEPLOYMENT_MODE=local
+CINESEEK_ALLOW_BENCHMARK_WRITES=true
+```
+
+Do not add `CINESEEK_ALLOW_BENCHMARK_WRITES` to Vercel. The write routes remain
+disabled unless the deployment is explicitly in local mode and the opt-in is
+set to `true`.
 
 ## Updating and rolling back data
 
