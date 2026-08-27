@@ -50,7 +50,6 @@ export function MoviePoster({
       </div>
       <div className="posterShade" aria-hidden="true" />
       <span className="rank">{String(rank).padStart(2, "0")}</span>
-      <div className="posterWords">{title}</div>
       {scorePercent !== undefined && (
         <span
           className="match"

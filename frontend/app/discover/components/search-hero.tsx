@@ -62,13 +62,14 @@ export function SearchHero({
           </label>
           <TypeaheadCombobox
             id="movie-search"
+            name="query"
             input={input}
             onInputChange={onInputChange}
             onSelect={onSelectSuggestion}
             placeholder="Search titles, people, genres, or moods"
             suggestions={suggestions}
           />
-          <button type="submit" disabled={!input.trim()}>
+          <button type="submit">
             Search <span aria-hidden="true">→</span>
           </button>
         </form>

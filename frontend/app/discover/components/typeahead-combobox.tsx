@@ -26,6 +26,7 @@ function orderedGroups(suggestions: TypeaheadSuggestions, input: string) {
 
 export function TypeaheadCombobox({
   id,
+  name,
   input,
   suggestions,
   onInputChange,
@@ -33,6 +34,7 @@ export function TypeaheadCombobox({
   placeholder,
 }: {
   id: string;
+  name: string;
   input: string;
   suggestions?: TypeaheadSuggestions;
   onInputChange: (value: string) => void;
@@ -54,16 +56,25 @@ export function TypeaheadCombobox({
     isFocused;
 
   useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
+    const dismissFromOutside = (event: Event) => {
       if (!containerRef.current?.contains(event.target as Node))
         setIsFocused(false);
     };
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointerdown", dismissFromOutside);
+    document.addEventListener("touchstart", dismissFromOutside, {
+      passive: true,
+    });
+    return () => {
+      document.removeEventListener("pointerdown", dismissFromOutside);
+      document.removeEventListener("touchstart", dismissFromOutside);
+    };
   }, []);
 
   useEffect(() => {
     const handleScroll = () => {
+      // iOS scrolls the page to reveal a focused input. Keep the menu open
+      // for that browser adjustment; outside touch/pointer input dismisses it.
+      if (containerRef.current?.contains(document.activeElement)) return;
       // Suggestions are anchored to the input, so do not leave a stale menu
       // floating over unrelated content after the page moves.
       setActiveIndex(-1);
@@ -102,6 +113,7 @@ export function TypeaheadCombobox({
     <div className="typeahead" ref={containerRef}>
       <input
         id={id}
+        name={name}
         value={input}
         onChange={(event) => handleInputChange(event.target.value)}
         onFocus={() => setIsFocused(true)}

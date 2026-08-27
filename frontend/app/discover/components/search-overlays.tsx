@@ -38,6 +38,7 @@ export function StickySearch({
       </label>
       <TypeaheadCombobox
         id="sticky-movie-search"
+        name="query"
         input={input}
         onInputChange={onInputChange}
         onSelect={onSelectSuggestion}
@@ -47,7 +48,7 @@ export function StickySearch({
       <span className="stickySearchMode" aria-hidden="true">
         {mode}
       </span>
-      <button type="submit" disabled={!input.trim()}>
+      <button type="submit">
         Search <span aria-hidden="true">→</span>
       </button>
     </form>

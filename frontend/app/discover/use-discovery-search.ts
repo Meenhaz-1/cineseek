@@ -274,7 +274,14 @@ export function useDiscoverySearch() {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    chooseQuery(input.trim(), true);
+    const form = event.currentTarget as HTMLFormElement;
+    const formInput = form.elements.namedItem("query");
+    const submittedInput =
+      formInput instanceof HTMLInputElement ? formInput.value : input;
+    const nextQuery = submittedInput.trim();
+    if (!nextQuery) return;
+    setInput(nextQuery);
+    chooseQuery(nextQuery, true);
   }
 
   function submitSticky(event: FormEvent) {

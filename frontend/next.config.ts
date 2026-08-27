@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
+const isDevelopment = process.env.NODE_ENV === "development";
+const scriptSource = isDevelopment
+  ? "'self' 'unsafe-inline' 'unsafe-eval'"
+  : "'self' 'unsafe-inline'";
+
 const nextConfig: NextConfig = {
   agentRules: false,
+  allowedDevOrigins: ["localhost", "127.0.0.1"],
   outputFileTracingIncludes: {
     "/api/search": [
       "./.runtime-data/corpus.enriched.jsonl",
@@ -55,8 +61,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           {
             key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: https://image.tmdb.org; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'",
+            value: `default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: https://image.tmdb.org; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src ${scriptSource}; connect-src 'self'`,
           },
         ],
       },
