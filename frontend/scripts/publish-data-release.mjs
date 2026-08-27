@@ -1,4 +1,5 @@
 import { put } from "@vercel/blob";
+import { gzipSync } from "node:zlib";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -165,19 +166,26 @@ if (dryRun) {
 
 for (const [key, source] of Object.entries(sources)) {
   const contents = contentsByKey[key];
-  const pathname = `${prefix}/${source.filename}`;
-  await put(pathname, contents, {
+  const uploadedContents = gzipSync(contents, { level: 9 });
+  const pathname = `${prefix}/${source.filename}.gz`;
+  console.log(
+    `Uploading ${key}: ${contents.byteLength} -> ${uploadedContents.byteLength} bytes`,
+  );
+  await put(pathname, uploadedContents, {
     access: "private",
     addRandomSuffix: false,
     allowOverwrite: false,
-    multipart: contents.byteLength > 4_000_000,
+    cacheControlMaxAge: 31_536_000,
+    multipart: uploadedContents.byteLength > 4_000_000,
     token: process.env.BLOB_READ_WRITE_TOKEN,
   });
   files[key] = {
     pathname,
+    encoding: "gzip",
     sha256: sha256(contents),
     bytes: contents.byteLength,
   };
+  console.log(`Uploaded ${key}.`);
 }
 
 const corpusStats = await stat(corpusPath);
@@ -200,9 +208,11 @@ const manifestContents = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
 await put(`${prefix}/manifest.json`, manifestContents, {
   access: "private",
   addRandomSuffix: false,
+  cacheControlMaxAge: 31_536_000,
   allowOverwrite: false,
   token: process.env.BLOB_READ_WRITE_TOKEN,
 });
 
+console.log("Uploaded manifest.");
 console.log(`Published CineSeek data release ${releaseId}.`);
 console.log(`Set CINESEEK_DATA_RELEASE=${releaseId} in Vercel.`);
