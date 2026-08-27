@@ -17,6 +17,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -e ".[dev]"
+      - name: Prepare Python test results
+        run: mkdir -p test-results
       - name: Run Python tests
         run: python -m pytest --junitxml=test-results/pytest.xml
       - name: Upload Python test results
