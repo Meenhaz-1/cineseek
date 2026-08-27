@@ -46,6 +46,22 @@ const registry = {
         directorMovieCount: 0,
       },
       {
+        id: "person:christopher-nolan",
+        name: "Christopher Nolan",
+        roles: ["director"],
+        movieCount: 10,
+        actorMovieCount: 0,
+        directorMovieCount: 10,
+      },
+      {
+        id: "person:nolan-north",
+        name: "Nolan North",
+        roles: ["actor"],
+        movieCount: 7,
+        actorMovieCount: 7,
+        directorMovieCount: 0,
+      },
+      {
         id: "person:steven-spielberg",
         name: "Steven Spielberg",
         roles: ["director"],
@@ -202,6 +218,20 @@ test("ranks partial person candidates by catalog size without narrowing retrieva
   assert.equal(plan.entities.personCandidates[0].roleMovieCount, 30);
   assert.equal(plan.routes.titleQuery, "steven");
   assert.equal(plan.routes.fieldQuery, "steven");
+});
+
+test("matches surnames and ranks partial people by catalog size", () => {
+  const plan = planQuery("nolan", indexes);
+  assert.deepEqual(
+    plan.entities.personCandidates.slice(0, 2).map(({ name, movieCount }) => ({
+      name,
+      movieCount,
+    })),
+    [
+      { name: "Christopher Nolan", movieCount: 10 },
+      { name: "Nolan North", movieCount: 7 },
+    ],
+  );
 });
 
 test("uses role-specific catalog size for contextual partial names", () => {

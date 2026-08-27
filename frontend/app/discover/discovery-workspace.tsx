@@ -212,15 +212,20 @@ export function DiscoveryWorkspace() {
                   {movie.personPopularityBoost && (
                     <span className="matchReason">
                       <b>
-                        Person popularity +
+                        Person + rating evidence +
                         {Math.round(
-                          movie.personPopularityBoost.contribution * 100,
+                          movie.personPopularityBoost.totalContribution * 100,
                         )}
                         %
                       </b>
                       <span>
                         {movie.personPopularityBoost.name} ·{" "}
                         {movie.personPopularityBoost.movieCount} catalog movies
+                        ·{" "}
+                        {movie.personPopularityBoost.ratingEvidenceContribution.toFixed(
+                          3,
+                        )}{" "}
+                        rating-volume boost
                       </span>
                     </span>
                   )}

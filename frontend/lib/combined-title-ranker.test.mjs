@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DEFAULT_COMBINED_WEIGHTS,
   MIN_RATING_COUNT_FOR_AVERAGE,
+  PERSON_RATING_EVIDENCE_WEIGHT,
   SINGLE_GENRE_DISCOVERY_WEIGHTS,
   scoreCombinedTitleCandidates,
   validateCombinedWeights,
@@ -14,6 +15,29 @@ const records = new Map([
   ["2", { id: "2", title: "Road to Fury", year: 2020 }],
   ["3", { id: "3", title: "Glory Road", year: 2006 }],
 ]);
+
+function ratingStats(records) {
+  const maxRatingCount = Math.max(
+    1,
+    ...[...records.values()].map(({ ratingCount = 0 }) => ratingCount),
+  );
+  return {
+    ratingVotes: 1000,
+    corpusRatingMean: 3.5,
+    maxRatingCount,
+    ratingById: new Map(
+      [...records.values()].map((record) => [
+        record.id,
+        {
+          averageRatingEligible: (record.ratingCount ?? 0) >= 5,
+          bayesianRating: record.averageRating ?? 0,
+          ratingEvidence:
+            Math.log1p(record.ratingCount ?? 0) / Math.log1p(maxRatingCount),
+        },
+      ]),
+    ),
+  };
+}
 
 test("normalizes relative weights into effective percentages", () => {
   const result = validateCombinedWeights({
@@ -441,8 +465,12 @@ test("adds a decaying catalog-size contribution to multiple person-linked movies
   assert.equal(boosted.length, 2);
   assert.equal(boosted[0].personPopularityBoost.name, "Steven Spielberg");
   assert.ok(
-    boosted[0].personPopularityBoost.contribution >
-      boosted[1].personPopularityBoost.contribution,
+    boosted.find(
+      ({ personPopularityBoost }) => personPopularityBoost.occurrence === 1,
+    ).personPopularityBoost.contribution >
+      boosted.find(
+        ({ personPopularityBoost }) => personPopularityBoost.occurrence === 2,
+      ).personPopularityBoost.contribution,
   );
   for (const candidate of boosted)
     assert.ok(
@@ -455,6 +483,132 @@ test("adds a decaying catalog-size contribution to multiple person-linked movies
       .personPopularityBoost,
     undefined,
   );
+});
+
+test("matches Christopher Nolan ahead of Nolan North and exposes rating evidence", () => {
+  const personRecords = new Map([
+    [
+      "nolan-film",
+      { id: "nolan-film", title: "Nolan Film", genres: [], ratingCount: 5 },
+    ],
+    [
+      "north-film",
+      { id: "north-film", title: "North Film", genres: [], ratingCount: 5 },
+    ],
+  ]);
+  const match = (value) => ({
+    score: 0.9,
+    exactEntityMatch: false,
+    bestMatch: {
+      field: value.includes("Christopher") ? "directors" : "cast",
+      value,
+      score: 0.9,
+    },
+    matches: [
+      {
+        field: value.includes("Christopher") ? "directors" : "cast",
+        value,
+        score: 0.9,
+      },
+    ],
+  });
+  const result = scoreCombinedTitleCandidates(
+    personRecords,
+    [...personRecords.keys()],
+    "nolan",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    {
+      fieldMatches: new Map([
+        ["nolan-film", match("Christopher Nolan")],
+        ["north-film", match("Nolan North")],
+      ]),
+      personCandidates: [
+        {
+          id: "person:christopher-nolan",
+          name: "Christopher Nolan",
+          roles: ["director"],
+          role: "director",
+          movieCount: 10,
+          roleMovieCount: 10,
+        },
+        {
+          id: "person:nolan-north",
+          name: "Nolan North",
+          roles: ["actor"],
+          role: "actor",
+          movieCount: 7,
+          roleMovieCount: 7,
+        },
+      ],
+      ratingStats: ratingStats(personRecords),
+    },
+  );
+  assert.equal(result.candidatesPreview[0].id, "nolan-film");
+  assert.equal(
+    result.candidatesPreview[0].personPopularityBoost.name,
+    "Christopher Nolan",
+  );
+  assert.ok(
+    result.candidatesPreview[0].personPopularityBoost
+      .ratingEvidenceContribution > 0,
+  );
+  assert.equal(
+    result.rankingContext.personRatingEvidenceWeight,
+    PERSON_RATING_EVIDENCE_WEIGHT,
+  );
+});
+
+test("rating volume cannot overwhelm a stronger person catalog signal", () => {
+  const personRecords = new Map([
+    [
+      "nolan-film",
+      { id: "nolan-film", title: "Nolan Film", genres: [], ratingCount: 1 },
+    ],
+    [
+      "north-film",
+      { id: "north-film", title: "North Film", genres: [], ratingCount: 1000 },
+    ],
+  ]);
+  const fieldMatch = (field, value) => ({
+    score: 0.9,
+    exactEntityMatch: false,
+    bestMatch: { field, value, score: 0.9 },
+    matches: [{ field, value, score: 0.9 }],
+  });
+  const result = scoreCombinedTitleCandidates(
+    personRecords,
+    [...personRecords.keys()],
+    "nolan",
+    DEFAULT_COMBINED_WEIGHTS,
+    10,
+    {
+      fieldMatches: new Map([
+        ["nolan-film", fieldMatch("directors", "Christopher Nolan")],
+        ["north-film", fieldMatch("cast", "Nolan North")],
+      ]),
+      personCandidates: [
+        {
+          id: "person:christopher-nolan",
+          name: "Christopher Nolan",
+          roles: ["director"],
+          role: "director",
+          movieCount: 10,
+          roleMovieCount: 10,
+        },
+        {
+          id: "person:nolan-north",
+          name: "Nolan North",
+          roles: ["actor"],
+          role: "actor",
+          movieCount: 7,
+          roleMovieCount: 7,
+        },
+      ],
+      ratingStats: ratingStats(personRecords),
+    },
+  );
+  assert.equal(result.candidatesPreview[0].id, "nolan-film");
 });
 
 test("uses base rank to apply popularity decay deterministically", () => {

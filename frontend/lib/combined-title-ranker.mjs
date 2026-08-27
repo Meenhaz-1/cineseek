@@ -45,6 +45,7 @@ export const COMPOUND_GENRE_DISCOVERY_WEIGHTS = {
 export const BAYESIAN_RATING_PRIOR = 20;
 export const MIN_RATING_COUNT_FOR_AVERAGE = 5;
 export const PERSON_POPULARITY_WEIGHT = 0.06;
+export const PERSON_RATING_EVIDENCE_WEIGHT = 0.01;
 
 function validateRelativeWeights(input, defaults, keys, label) {
   if (
@@ -370,11 +371,17 @@ export function scoreCombinedTitleCandidates(
         const contribution = Number(
           (PERSON_POPULARITY_WEIGHT * signal * decay).toFixed(6),
         );
+        const ratingEvidenceContribution = Number(
+          (PERSON_RATING_EVIDENCE_WEIGHT * candidate.ratingEvidence).toFixed(6),
+        );
+        const totalContribution = Number(
+          (contribution + ratingEvidenceContribution).toFixed(6),
+        );
         return {
           ...candidate,
           baseCombinedScore: candidate.combinedScore,
           combinedScore: Number(
-            Math.min(1, candidate.combinedScore + contribution).toFixed(6),
+            Math.min(1, candidate.combinedScore + totalContribution).toFixed(6),
           ),
           personPopularityBoost: {
             entityId: person.id,
@@ -386,6 +393,9 @@ export function scoreCombinedTitleCandidates(
             signal: Number(signal.toFixed(6)),
             decay: Number(decay.toFixed(6)),
             contribution,
+            ratingEvidence: candidate.ratingEvidence,
+            ratingEvidenceContribution,
+            totalContribution,
           },
         };
       })
@@ -430,6 +440,7 @@ export function scoreCombinedTitleCandidates(
       bayesianPrior: BAYESIAN_RATING_PRIOR,
       minimumAverageRatingCount: MIN_RATING_COUNT_FOR_AVERAGE,
       personPopularityWeight: PERSON_POPULARITY_WEIGHT,
+      personRatingEvidenceWeight: PERSON_RATING_EVIDENCE_WEIGHT,
       personPopularityApplied: maximumPersonMovieCount > 0,
     },
     weights,

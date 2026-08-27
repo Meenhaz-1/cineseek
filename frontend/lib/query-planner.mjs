@@ -350,8 +350,10 @@ function partialPersonCandidates(query, indexes, preferredRole) {
         : indexes.people;
   return rolePool
     .map((person) => {
-      const matchedNameToken = tokens(person.name)[0];
-      if (!matchedNameToken?.startsWith(matchedText)) return null;
+      const matchedNameToken = tokens(person.name).find((token) =>
+        token.startsWith(matchedText),
+      );
+      if (!matchedNameToken) return null;
       if (matchedNameToken !== matchedText && matchedText.length < 4)
         return null;
       const role = personRole(person, preferredRole);
