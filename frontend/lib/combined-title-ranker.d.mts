@@ -24,6 +24,7 @@ export type PersonPopularityBoost = {
   ratingEvidence: number;
   ratingEvidenceContribution: number;
   totalContribution: number;
+  personIntentRank?: number;
 };
 export type CombinedTitleCandidate = TitleTokenRecord & {
   signals: CombinedWeights;
@@ -109,6 +110,7 @@ export function scoreCombinedTitleCandidates(
       roleMovieCount: number;
     }[];
     personRole?: "actor" | "director";
+    personIntentRanking?: boolean;
   },
 ): {
   method:
@@ -133,6 +135,7 @@ export function scoreCombinedTitleCandidates(
     minimumAverageRatingCount: number;
     personPopularityWeight: number;
     personRatingEvidenceWeight: number;
+    personIntentRanking: boolean;
     personPopularityApplied: boolean;
   };
   candidateCount: number;

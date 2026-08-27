@@ -150,6 +150,7 @@ export function scoreCombinedTitleCandidates(
   const genreFallbackQuery = rankingContext.genreFallbackQuery ?? "";
   const blendFieldEvidence = fieldMatches instanceof Map;
   const personCandidates = rankingContext.personCandidates ?? [];
+  const personIntentRanking = rankingContext.personIntentRanking === true;
   const isStructuredGenreDiscovery =
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
@@ -350,19 +351,25 @@ export function scoreCombinedTitleCandidates(
   if (maximumPersonMovieCount > 0) {
     candidates = candidates
       .map((candidate) => {
-        const person = personCandidates.find((personCandidate) => {
-          const personName = normalizedPersonName(personCandidate.name);
-          return candidate.fieldMatch?.matches.some((match) => {
-            const matchedRole =
-              rankingContext.personRole ?? personCandidate.role;
-            const roleMatches =
-              match.field ===
-              (matchedRole === "director" ? "directors" : "cast");
-            return (
-              roleMatches && normalizedPersonName(match.value) === personName
-            );
-          });
-        });
+        const personCandidateIndex = personCandidates.findIndex(
+          (personCandidate) => {
+            const personName = normalizedPersonName(personCandidate.name);
+            return candidate.fieldMatch?.matches.some((match) => {
+              const matchedRole =
+                rankingContext.personRole ?? personCandidate.role;
+              const roleMatches =
+                match.field ===
+                (matchedRole === "director" ? "directors" : "cast");
+              return (
+                roleMatches && normalizedPersonName(match.value) === personName
+              );
+            });
+          },
+        );
+        const person =
+          personCandidateIndex >= 0
+            ? personCandidates[personCandidateIndex]
+            : null;
         if (!person) return candidate;
         const occurrence = (occurrencesByPerson.get(person.id) ?? 0) + 1;
         occurrencesByPerson.set(person.id, occurrence);
@@ -396,14 +403,24 @@ export function scoreCombinedTitleCandidates(
             ratingEvidence: candidate.ratingEvidence,
             ratingEvidenceContribution,
             totalContribution,
+            personIntentRank: personCandidateIndex,
           },
         };
       })
-      .sort(
-        (left, right) =>
+      .sort((left, right) => {
+        if (personIntentRanking) {
+          const leftPersonRank =
+            left.personPopularityBoost?.personIntentRank ?? Infinity;
+          const rightPersonRank =
+            right.personPopularityBoost?.personIntentRank ?? Infinity;
+          if (leftPersonRank !== rightPersonRank)
+            return leftPersonRank - rightPersonRank;
+        }
+        return (
           right.combinedScore - left.combinedScore ||
-          baseRankById.get(left.id) - baseRankById.get(right.id),
-      );
+          baseRankById.get(left.id) - baseRankById.get(right.id)
+        );
+      });
   }
   return {
     method: isStructuredGenreDiscovery
@@ -441,6 +458,7 @@ export function scoreCombinedTitleCandidates(
       minimumAverageRatingCount: MIN_RATING_COUNT_FOR_AVERAGE,
       personPopularityWeight: PERSON_POPULARITY_WEIGHT,
       personRatingEvidenceWeight: PERSON_RATING_EVIDENCE_WEIGHT,
+      personIntentRanking,
       personPopularityApplied: maximumPersonMovieCount > 0,
     },
     weights,

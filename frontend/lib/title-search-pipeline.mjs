@@ -427,6 +427,7 @@ export function runTitleSearch(pipeline, input, options = {}) {
         ratingStats: pipeline.ratingStats,
         personCandidates: queryPlan?.entities?.personCandidates ?? [],
         personRole: queryPlan?.routes.fieldRole,
+        personIntentRanking: queryPlan?.routes.personIntentRanking === true,
       },
     );
     scoringMs = roundedMs(scoringStartedAt);

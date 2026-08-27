@@ -210,7 +210,7 @@ test("does not force ambiguous or exact entities into corrections", () => {
 
 test("ranks partial person candidates by catalog size without narrowing retrieval", () => {
   const plan = planQuery("steven", indexes);
-  assert.equal(plan.intent, "general_search");
+  assert.equal(plan.intent, "person_discovery");
   assert.equal(plan.corrections.length, 0);
   assert.equal(plan.entities.personCandidates[0].name, "Steven Spielberg");
   assert.equal(plan.entities.personCandidates[0].role, "director");
@@ -218,6 +218,7 @@ test("ranks partial person candidates by catalog size without narrowing retrieva
   assert.equal(plan.entities.personCandidates[0].roleMovieCount, 30);
   assert.equal(plan.routes.titleQuery, "steven");
   assert.equal(plan.routes.fieldQuery, "steven");
+  assert.equal(plan.routes.personIntentRanking, true);
 });
 
 test("matches surnames and ranks partial people by catalog size", () => {
@@ -232,6 +233,7 @@ test("matches surnames and ranks partial people by catalog size", () => {
       { name: "Nolan North", movieCount: 7 },
     ],
   );
+  assert.equal(plan.routes.personIntentRanking, true);
 });
 
 test("uses role-specific catalog size for contextual partial names", () => {

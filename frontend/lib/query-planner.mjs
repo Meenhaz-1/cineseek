@@ -813,6 +813,9 @@ export function planQuery(rawQuery, indexes, options = {}) {
   const ownsPartialPersonRouting = Boolean(
     preferredRole && personCandidates.length,
   );
+  const personIntentRanking = Boolean(
+    personCandidates.length && !rawExactTitle && !rawHasMetadata,
+  );
   const titleQuery =
     metadata.explicitTitleText ||
     ((people.length && ownsPersonRouting) || ownsPartialPersonRouting
@@ -869,7 +872,7 @@ export function planQuery(rawQuery, indexes, options = {}) {
   const intent =
     exactTitle && metadata.genres.length === 0
       ? "exact_title"
-      : people.length
+      : people.length || personIntentRanking
         ? "person_discovery"
         : hasFilters
           ? "filtered_discovery"
@@ -926,7 +929,9 @@ export function planQuery(rawQuery, indexes, options = {}) {
     );
   if (personCandidates.length)
     trace.push(
-      `Found ${personCandidates.length} partial person-name signals for movie ranking; catalog size can contribute to relevance without changing the search intent.`,
+      personIntentRanking
+        ? `Detected person intent from ${personCandidates.length} partial person-name signals; matching people are ranked before unrelated movie text matches.`
+        : `Found ${personCandidates.length} partial person-name signals for movie ranking; catalog size can contribute to relevance without changing the search intent.`,
     );
   if (metadata.genres.length)
     trace.push(
@@ -976,6 +981,7 @@ export function planQuery(rawQuery, indexes, options = {}) {
         .filter((term) => SEMANTIC_SYNONYMS[term])
         .map((term) => ({ term, values: SEMANTIC_SYNONYMS[term] })),
       structuredGenreRanking: isPureGenreDiscovery,
+      personIntentRanking,
     },
     entities: {
       people,

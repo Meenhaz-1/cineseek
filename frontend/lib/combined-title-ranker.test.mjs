@@ -542,6 +542,7 @@ test("matches Christopher Nolan ahead of Nolan North and exposes rating evidence
         },
       ],
       ratingStats: ratingStats(personRecords),
+      personIntentRanking: true,
     },
   );
   assert.equal(result.candidatesPreview[0].id, "nolan-film");
@@ -557,6 +558,7 @@ test("matches Christopher Nolan ahead of Nolan North and exposes rating evidence
     result.rankingContext.personRatingEvidenceWeight,
     PERSON_RATING_EVIDENCE_WEIGHT,
   );
+  assert.equal(result.rankingContext.personIntentRanking, true);
 });
 
 test("rating volume cannot overwhelm a stronger person catalog signal", () => {
