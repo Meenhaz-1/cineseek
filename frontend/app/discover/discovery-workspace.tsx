@@ -70,8 +70,10 @@ export function DiscoveryWorkspace() {
     showStickySearch,
     submit,
     submitSticky,
+    selectTypeaheadSuggestion,
     suggestedQuery,
     suggestedQueryLabel,
+    suggestions,
     titleRetrieval,
     titleRetrievalLoading,
     updateGenreWeight,
@@ -92,6 +94,8 @@ export function DiscoveryWorkspace() {
         onAcceptSuggestion={acceptSuggestion}
         onSearchOriginal={searchOriginalQuery}
         onRunExample={runExample}
+        suggestions={suggestions}
+        onSelectSuggestion={selectTypeaheadSuggestion}
       />
 
       <section className="workspace" id="discover">
@@ -2478,6 +2482,8 @@ export function DiscoveryWorkspace() {
           mode={mode}
           onInputChange={setInput}
           onSubmit={submitSticky}
+          suggestions={suggestions}
+          onSelectSuggestion={selectTypeaheadSuggestion}
         />
       )}
 

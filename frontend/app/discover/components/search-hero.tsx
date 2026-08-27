@@ -1,6 +1,11 @@
 import type { FormEvent, RefObject } from "react";
 
 import { examples } from "../../data";
+import type {
+  TypeaheadSuggestion,
+  TypeaheadSuggestions,
+} from "../search-contracts";
+import { TypeaheadCombobox } from "./typeahead-combobox";
 
 export function SearchHero({
   input,
@@ -13,6 +18,8 @@ export function SearchHero({
   onAcceptSuggestion,
   onSearchOriginal,
   onRunExample,
+  suggestions,
+  onSelectSuggestion,
 }: {
   input: string;
   automaticCorrection?: {
@@ -27,6 +34,8 @@ export function SearchHero({
   onAcceptSuggestion: () => void;
   onSearchOriginal: () => void;
   onRunExample: (example: string) => void;
+  suggestions?: TypeaheadSuggestions;
+  onSelectSuggestion: (suggestion: TypeaheadSuggestion) => void;
 }) {
   return (
     <section className="hero" id="top">
@@ -51,12 +60,13 @@ export function SearchHero({
           <label className="srOnly" htmlFor="movie-search">
             Search movies
           </label>
-          <input
+          <TypeaheadCombobox
             id="movie-search"
-            value={input}
-            onChange={(event) => onInputChange(event.target.value)}
+            input={input}
+            onInputChange={onInputChange}
+            onSelect={onSelectSuggestion}
             placeholder="Search titles, people, genres, or moods"
-            autoComplete="off"
+            suggestions={suggestions}
           />
           <button type="submit" disabled={!input.trim()}>
             Search <span aria-hidden="true">→</span>

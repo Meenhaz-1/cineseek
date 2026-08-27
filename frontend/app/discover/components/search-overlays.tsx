@@ -1,18 +1,27 @@
 import type { FormEvent } from "react";
 
 import type { Movie } from "../../data";
-import type { Mode } from "../search-contracts";
+import type {
+  Mode,
+  TypeaheadSuggestion,
+  TypeaheadSuggestions,
+} from "../search-contracts";
+import { TypeaheadCombobox } from "./typeahead-combobox";
 
 export function StickySearch({
   input,
   mode,
   onInputChange,
   onSubmit,
+  suggestions,
+  onSelectSuggestion,
 }: {
   input: string;
   mode: Mode;
   onInputChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
+  suggestions?: TypeaheadSuggestions;
+  onSelectSuggestion: (suggestion: TypeaheadSuggestion) => void;
 }) {
   return (
     <form
@@ -27,11 +36,13 @@ export function StickySearch({
       <label className="srOnly" htmlFor="sticky-movie-search">
         Search movies from anywhere on the page
       </label>
-      <input
+      <TypeaheadCombobox
         id="sticky-movie-search"
-        value={input}
-        onChange={(event) => onInputChange(event.target.value)}
+        input={input}
+        onInputChange={onInputChange}
+        onSelect={onSelectSuggestion}
         placeholder="Search movies, people, or genres"
+        suggestions={suggestions}
       />
       <span className="stickySearchMode" aria-hidden="true">
         {mode}

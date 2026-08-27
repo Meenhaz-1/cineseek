@@ -20,6 +20,8 @@ import type {
   ParserTestState,
   TitleRetrieval,
   TitleRetrievalState,
+  TypeaheadSuggestion,
+  TypeaheadSuggestions,
 } from "./search-contracts";
 import {
   analysisFromPlan,
@@ -52,6 +54,7 @@ export function useDiscoverySearch() {
   const [combinedUpdating, setCombinedUpdating] = useState(false);
   const [resultLimit, setResultLimit] = useState(RESULT_PAGE_SIZE);
   const [showStickySearch, setShowStickySearch] = useState(false);
+  const [suggestions, setSuggestions] = useState<TypeaheadSuggestions>();
   const heroSearchRef = useRef<HTMLFormElement>(null);
   const resultsSummaryRef = useRef<HTMLDivElement>(null);
   const focusResultsAfterLoad = useRef(false);
@@ -109,6 +112,41 @@ export function useDiscoverySearch() {
   const inferred = analysis.semanticExpansions
     .flatMap(({ values }) => values)
     .slice(0, 4);
+
+  useEffect(() => {
+    const trimmedInput = input.trim();
+    if (trimmedInput.length < 2) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      void fetch(
+        `/api/suggestions?q=${encodeURIComponent(trimmedInput)}&limit=6`,
+        {
+          signal: controller.signal,
+        },
+      )
+        .then(async (response) => {
+          const payload = (await response.json()) as
+            TypeaheadSuggestions | { error?: string };
+          if (!response.ok || !("query" in payload))
+            throw new Error(
+              "error" in payload
+                ? payload.error || "Suggestions unavailable."
+                : "Suggestions unavailable.",
+            );
+          if (payload.query === trimmedInput.toLowerCase())
+            setSuggestions(payload);
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError")
+            return;
+          setSuggestions(undefined);
+        });
+    }, 200);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [input]);
 
   useEffect(() => {
     const heroSearch = heroSearchRef.current;
@@ -266,6 +304,7 @@ export function useDiscoverySearch() {
     setCoach({ status: "loading" });
     setResultLimit(RESULT_PAGE_SIZE);
     setGenreWeightOverrides(null);
+    setSuggestions(undefined);
     setAutocorrect(true);
     if (nextQuery === query) setCoachRequest((value) => value + 1);
     else setQuery(nextQuery);
@@ -295,6 +334,11 @@ export function useDiscoverySearch() {
     const nextQuery = suggestedQueryLabel ?? suggestedQuery;
     setInput(nextQuery);
     chooseQuery(nextQuery, true);
+  }
+
+  function selectTypeaheadSuggestion(suggestion: TypeaheadSuggestion) {
+    setInput(suggestion.label);
+    chooseQuery(suggestion.label, true);
   }
 
   function searchOriginalQuery() {
@@ -370,8 +414,10 @@ export function useDiscoverySearch() {
     showStickySearch,
     submit,
     submitSticky,
+    selectTypeaheadSuggestion,
     suggestedQuery,
     suggestedQueryLabel,
+    suggestions,
     titleRetrieval,
     titleRetrievalLoading,
     updateGenreWeight,

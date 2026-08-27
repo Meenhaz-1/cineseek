@@ -11,6 +11,20 @@ export type CombinedWeightKey =
 export type CombinedWeights = Record<CombinedWeightKey, number>;
 export type GenreWeightKey = "genreFocus" | "bayesianRating" | "ratingEvidence";
 export type GenreWeights = Record<GenreWeightKey, number>;
+export type TypeaheadSuggestion = {
+  id: string;
+  label: string;
+  type: string;
+  year?: number | null;
+  roles?: string[];
+  movieCount?: number;
+};
+export type TypeaheadSuggestions = {
+  query: string;
+  titles: TypeaheadSuggestion[];
+  people: TypeaheadSuggestion[];
+  genres: TypeaheadSuggestion[];
+};
 export type CoachState = {
   status: "loading" | "ready" | "unavailable";
   paragraph?: string;
