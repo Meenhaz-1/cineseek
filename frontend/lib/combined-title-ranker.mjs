@@ -2,6 +2,7 @@ import {
   characterTrigrams,
   scoreCharacterTrigramCandidate,
 } from "./character-trigram-index.mjs";
+import { exactTitleKey } from "./exact-title-index.mjs";
 import { scoreEditDistanceCandidate } from "./edit-distance.mjs";
 import { scoreTokenCoverageCandidate } from "./token-coverage.mjs";
 import { scoreOrderedTokenProximityCandidate } from "./ordered-token-proximity.mjs";
@@ -46,6 +47,16 @@ export const BAYESIAN_RATING_PRIOR = 20;
 export const MIN_RATING_COUNT_FOR_AVERAGE = 5;
 export const PERSON_POPULARITY_WEIGHT = 0.06;
 export const PERSON_RATING_EVIDENCE_WEIGHT = 0.01;
+
+function titlePhrasePriority(title, query) {
+  const normalizedQuery = exactTitleKey(query);
+  if (normalizedQuery.split(" ").length < 2) return 0;
+  const normalizedTitle = exactTitleKey(title).replace(/^(a|an|the)\s+/i, "");
+  return normalizedTitle === normalizedQuery ||
+    normalizedTitle.startsWith(`${normalizedQuery} `)
+    ? 1
+    : 0;
+}
 
 function validateRelativeWeights(input, defaults, keys, label) {
   if (
@@ -300,12 +311,16 @@ export function scoreCombinedTitleCandidates(
         structuredGenreContributions,
         structuredGenreScore,
         isExactTitleMatch,
+        titlePhrasePriority: titlePhrasePriority(record.title, normalizedQuery),
       };
     })
     .sort((left, right) => {
       const exactTitlePriority =
         Number(right.isExactTitleMatch) - Number(left.isExactTitleMatch);
       if (exactTitlePriority) return exactTitlePriority;
+      const titlePhrasePriorityDifference =
+        right.titlePhrasePriority - left.titlePhrasePriority;
+      if (titlePhrasePriorityDifference) return titlePhrasePriorityDifference;
       const entityPriority =
         Number(right.fieldMatch?.exactEntityMatch ?? false) -
         Number(left.fieldMatch?.exactEntityMatch ?? false);

@@ -42,6 +42,7 @@ export type CombinedTitleCandidate = TitleTokenRecord & {
   structuredGenreContributions: GenreWeights;
   structuredGenreScore: number;
   isExactTitleMatch: boolean;
+  titlePhrasePriority: number;
   baseCombinedScore?: number;
   personPopularityBoost?: PersonPopularityBoost;
 };
