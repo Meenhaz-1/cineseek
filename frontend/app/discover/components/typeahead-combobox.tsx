@@ -73,7 +73,6 @@ export function TypeaheadCombobox({
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [input]);
-
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!open) return;
     if (event.key === "ArrowDown") {
