@@ -11,7 +11,7 @@ const outputPath = path.join(frontendRoot, "data", "benchmark-summary.json");
 const report = JSON.parse(await readFile(reportPath, "utf8"));
 
 const summary = {
-  label: "80-query provisional benchmark",
+  label: "82-query provisional benchmark",
   evaluatedQueries: report.evaluated_queries,
   candidateRecall: report.candidate_recall,
   mrr: report.mrr,

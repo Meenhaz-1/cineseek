@@ -52,6 +52,7 @@ export type QueryPlan = {
     concepts: string[];
     semanticExpansions: { term: string; values: string[] }[];
     structuredGenreRanking: boolean;
+    personIntentRanking: boolean;
   };
   entities: {
     people: PersonEntity[];

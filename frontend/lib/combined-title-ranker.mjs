@@ -2,6 +2,7 @@ import {
   characterTrigrams,
   scoreCharacterTrigramCandidate,
 } from "./character-trigram-index.mjs";
+import { exactTitleKey } from "./exact-title-index.mjs";
 import { scoreEditDistanceCandidate } from "./edit-distance.mjs";
 import { scoreTokenCoverageCandidate } from "./token-coverage.mjs";
 import { scoreOrderedTokenProximityCandidate } from "./ordered-token-proximity.mjs";
@@ -45,6 +46,17 @@ export const COMPOUND_GENRE_DISCOVERY_WEIGHTS = {
 export const BAYESIAN_RATING_PRIOR = 20;
 export const MIN_RATING_COUNT_FOR_AVERAGE = 5;
 export const PERSON_POPULARITY_WEIGHT = 0.06;
+export const PERSON_RATING_EVIDENCE_WEIGHT = 0.01;
+
+function titlePhrasePriority(title, query) {
+  const normalizedQuery = exactTitleKey(query);
+  if (normalizedQuery.split(" ").length < 2) return 0;
+  const normalizedTitle = exactTitleKey(title).replace(/^(a|an|the)\s+/i, "");
+  return normalizedTitle === normalizedQuery ||
+    normalizedTitle.startsWith(`${normalizedQuery} `)
+    ? 1
+    : 0;
+}
 
 function validateRelativeWeights(input, defaults, keys, label) {
   if (
@@ -149,6 +161,7 @@ export function scoreCombinedTitleCandidates(
   const genreFallbackQuery = rankingContext.genreFallbackQuery ?? "";
   const blendFieldEvidence = fieldMatches instanceof Map;
   const personCandidates = rankingContext.personCandidates ?? [];
+  const personIntentRanking = rankingContext.personIntentRanking === true;
   const isStructuredGenreDiscovery =
     rankingContext.structuredGenreRanking === true &&
     normalizedQuery.length === 0 &&
@@ -298,12 +311,16 @@ export function scoreCombinedTitleCandidates(
         structuredGenreContributions,
         structuredGenreScore,
         isExactTitleMatch,
+        titlePhrasePriority: titlePhrasePriority(record.title, normalizedQuery),
       };
     })
     .sort((left, right) => {
       const exactTitlePriority =
         Number(right.isExactTitleMatch) - Number(left.isExactTitleMatch);
       if (exactTitlePriority) return exactTitlePriority;
+      const titlePhrasePriorityDifference =
+        right.titlePhrasePriority - left.titlePhrasePriority;
+      if (titlePhrasePriorityDifference) return titlePhrasePriorityDifference;
       const entityPriority =
         Number(right.fieldMatch?.exactEntityMatch ?? false) -
         Number(left.fieldMatch?.exactEntityMatch ?? false);
@@ -349,19 +366,25 @@ export function scoreCombinedTitleCandidates(
   if (maximumPersonMovieCount > 0) {
     candidates = candidates
       .map((candidate) => {
-        const person = personCandidates.find((personCandidate) => {
-          const personName = normalizedPersonName(personCandidate.name);
-          return candidate.fieldMatch?.matches.some((match) => {
-            const matchedRole =
-              rankingContext.personRole ?? personCandidate.role;
-            const roleMatches =
-              match.field ===
-              (matchedRole === "director" ? "directors" : "cast");
-            return (
-              roleMatches && normalizedPersonName(match.value) === personName
-            );
-          });
-        });
+        const personCandidateIndex = personCandidates.findIndex(
+          (personCandidate) => {
+            const personName = normalizedPersonName(personCandidate.name);
+            return candidate.fieldMatch?.matches.some((match) => {
+              const matchedRole =
+                rankingContext.personRole ?? personCandidate.role;
+              const roleMatches =
+                match.field ===
+                (matchedRole === "director" ? "directors" : "cast");
+              return (
+                roleMatches && normalizedPersonName(match.value) === personName
+              );
+            });
+          },
+        );
+        const person =
+          personCandidateIndex >= 0
+            ? personCandidates[personCandidateIndex]
+            : null;
         if (!person) return candidate;
         const occurrence = (occurrencesByPerson.get(person.id) ?? 0) + 1;
         occurrencesByPerson.set(person.id, occurrence);
@@ -370,11 +393,17 @@ export function scoreCombinedTitleCandidates(
         const contribution = Number(
           (PERSON_POPULARITY_WEIGHT * signal * decay).toFixed(6),
         );
+        const ratingEvidenceContribution = Number(
+          (PERSON_RATING_EVIDENCE_WEIGHT * candidate.ratingEvidence).toFixed(6),
+        );
+        const totalContribution = Number(
+          (contribution + ratingEvidenceContribution).toFixed(6),
+        );
         return {
           ...candidate,
           baseCombinedScore: candidate.combinedScore,
           combinedScore: Number(
-            Math.min(1, candidate.combinedScore + contribution).toFixed(6),
+            Math.min(1, candidate.combinedScore + totalContribution).toFixed(6),
           ),
           personPopularityBoost: {
             entityId: person.id,
@@ -386,14 +415,27 @@ export function scoreCombinedTitleCandidates(
             signal: Number(signal.toFixed(6)),
             decay: Number(decay.toFixed(6)),
             contribution,
+            ratingEvidence: candidate.ratingEvidence,
+            ratingEvidenceContribution,
+            totalContribution,
+            personIntentRank: personCandidateIndex,
           },
         };
       })
-      .sort(
-        (left, right) =>
+      .sort((left, right) => {
+        if (personIntentRanking) {
+          const leftPersonRank =
+            left.personPopularityBoost?.personIntentRank ?? Infinity;
+          const rightPersonRank =
+            right.personPopularityBoost?.personIntentRank ?? Infinity;
+          if (leftPersonRank !== rightPersonRank)
+            return leftPersonRank - rightPersonRank;
+        }
+        return (
           right.combinedScore - left.combinedScore ||
-          baseRankById.get(left.id) - baseRankById.get(right.id),
-      );
+          baseRankById.get(left.id) - baseRankById.get(right.id)
+        );
+      });
   }
   return {
     method: isStructuredGenreDiscovery
@@ -430,6 +472,8 @@ export function scoreCombinedTitleCandidates(
       bayesianPrior: BAYESIAN_RATING_PRIOR,
       minimumAverageRatingCount: MIN_RATING_COUNT_FOR_AVERAGE,
       personPopularityWeight: PERSON_POPULARITY_WEIGHT,
+      personRatingEvidenceWeight: PERSON_RATING_EVIDENCE_WEIGHT,
+      personIntentRanking,
       personPopularityApplied: maximumPersonMovieCount > 0,
     },
     weights,

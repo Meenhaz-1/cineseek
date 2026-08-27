@@ -496,3 +496,45 @@ test("allows a genre word to participate in a longer title phrase without double
     1,
   );
 });
+
+test("prioritizes a title phrase over an incidental cast or tag match", () => {
+  const pipeline = buildTitleSearchPipeline([
+    {
+      _id: "lord",
+      title: "The Lord of the Rings: The Fellowship of the Ring",
+      metadata: {
+        year: 2001,
+        genres: ["Adventure"],
+        tags: [],
+        cast: [],
+        directors: [],
+        average_rating: 4,
+        rating_count: 100,
+      },
+    },
+    {
+      _id: "cast",
+      title: "Cold Comes the Night",
+      metadata: {
+        year: 2013,
+        genres: ["Drama"],
+        tags: ["lord of the rings"],
+        cast: [],
+        directors: [],
+        average_rating: 4,
+        rating_count: 100,
+      },
+    },
+  ]);
+  const result = runTitleSearch(pipeline, {
+    normalizedQuery: "lord of the",
+    retrievalQuery: "lord of the",
+    fieldQuery: "lord of the",
+  });
+
+  assert.equal(result.evaluation.rankedResults[0].id, "lord");
+  assert.equal(
+    result.combinedScoring.candidatesPreview[0].titlePhrasePriority,
+    1,
+  );
+});

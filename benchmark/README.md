@@ -1,6 +1,6 @@
 # Starter relevance benchmark — provisional labels
 
-This benchmark contains 80 intentionally varied search intents for MovieLens
+This benchmark contains 82 intentionally varied search intents for MovieLens
 Latest Small. It covers exact titles, misspellings, genre requests, moods, plot
 descriptions, decades, structured filters, and mixed intents.
 

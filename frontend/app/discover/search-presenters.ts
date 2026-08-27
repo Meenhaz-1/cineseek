@@ -198,7 +198,7 @@ export function combinedTakeaway(result: TitleRetrieval) {
   }
   if (top.personPopularityBoost) {
     const boost = top.personPopularityBoost;
-    return `${top.title} gets a ${boost.contribution.toFixed(3)} boost because it is connected to ${boost.name}, who has ${boost.movieCount} movies in the catalog. The boost becomes smaller for repeated movies from the same person.`;
+    return `${top.title} gets a ${boost.totalContribution.toFixed(3)} boost because it is connected to ${boost.name}, who has ${boost.movieCount} movies in the catalog. Catalog prominence contributes ${boost.contribution.toFixed(3)}, while ${boost.ratingEvidenceContribution.toFixed(3)} comes from its ${boost.ratingEvidence.toFixed(3)} rating-volume evidence. The person contribution becomes smaller for repeated movies from the same person.`;
   }
   if (top.fieldMatch?.bestMatch) {
     return `${top.title} ranks first with a ${top.combinedScore.toFixed(3)} final score. Its strongest movie-detail match is ${top.fieldMatch.bestMatch.label.toLowerCase()}: “${top.fieldMatch.bestMatch.value}”.`;

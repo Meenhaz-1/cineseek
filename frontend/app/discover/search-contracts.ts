@@ -76,6 +76,9 @@ export type FullSearchResult = {
     signal: number;
     decay: number;
     contribution: number;
+    ratingEvidence: number;
+    ratingEvidenceContribution: number;
+    totalContribution: number;
   };
 };
 export type TitleRetrieval = {
@@ -320,6 +323,7 @@ export type TitleRetrieval = {
           bayesianPrior: number;
           minimumAverageRatingCount: number;
           personPopularityWeight: number;
+          personRatingEvidenceWeight: number;
           personPopularityApplied: boolean;
         };
         candidateCount: number;

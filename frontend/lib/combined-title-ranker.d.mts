@@ -21,6 +21,10 @@ export type PersonPopularityBoost = {
   signal: number;
   decay: number;
   contribution: number;
+  ratingEvidence: number;
+  ratingEvidenceContribution: number;
+  totalContribution: number;
+  personIntentRank?: number;
 };
 export type CombinedTitleCandidate = TitleTokenRecord & {
   signals: CombinedWeights;
@@ -38,6 +42,7 @@ export type CombinedTitleCandidate = TitleTokenRecord & {
   structuredGenreContributions: GenreWeights;
   structuredGenreScore: number;
   isExactTitleMatch: boolean;
+  titlePhrasePriority: number;
   baseCombinedScore?: number;
   personPopularityBoost?: PersonPopularityBoost;
 };
@@ -50,6 +55,7 @@ export const COMPOUND_GENRE_DISCOVERY_WEIGHTS: GenreWeights;
 export const BAYESIAN_RATING_PRIOR: number;
 export const MIN_RATING_COUNT_FOR_AVERAGE: number;
 export const PERSON_POPULARITY_WEIGHT: number;
+export const PERSON_RATING_EVIDENCE_WEIGHT: number;
 export function validateCombinedWeights(input?: Partial<CombinedWeights>): {
   weights: CombinedWeights;
   effectiveWeights: CombinedWeights;
@@ -105,6 +111,7 @@ export function scoreCombinedTitleCandidates(
       roleMovieCount: number;
     }[];
     personRole?: "actor" | "director";
+    personIntentRanking?: boolean;
   },
 ): {
   method:
@@ -128,6 +135,8 @@ export function scoreCombinedTitleCandidates(
     bayesianPrior: number;
     minimumAverageRatingCount: number;
     personPopularityWeight: number;
+    personRatingEvidenceWeight: number;
+    personIntentRanking: boolean;
     personPopularityApplied: boolean;
   };
   candidateCount: number;

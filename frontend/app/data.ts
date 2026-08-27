@@ -30,6 +30,9 @@ export type Movie = {
     signal: number;
     decay: number;
     contribution: number;
+    ratingEvidence: number;
+    ratingEvidenceContribution: number;
+    totalContribution: number;
   };
   relevanceScore?: number;
   learningUseCase?: string;
