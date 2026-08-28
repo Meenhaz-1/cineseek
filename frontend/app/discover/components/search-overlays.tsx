@@ -92,7 +92,7 @@ export function MovieDetailsDialog({
           ))}
         </div>
         {movie.cast?.length ? (
-          <div>
+          <div className="modalCast">
             <small>Cast from optional TMDB enrichment</small>
             <div className="chips">
               {movie.cast.slice(0, 6).map((person) => (
