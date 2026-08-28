@@ -349,6 +349,15 @@ export const movies: Movie[] = baseMovies.map((movie) => {
     : { ...movie, learningUseCase };
 });
 
+// Featured in the hero art: a small mosaic of real dataset entries (not a
+// hardcoded mockup or a single film's poster) spanning different genres,
+// eras, and palettes, so the hero reads as "explore the catalog" rather
+// than spotlighting one arbitrary title. First entry is the featured tile.
+const heroMovieIds = ["109487", "5618", "58559"];
+export const heroMovies = heroMovieIds.map((id) =>
+  movies.find((movie) => movie.id === id)!,
+);
+
 export const examples = [
   "all movies",
   "intersteler",

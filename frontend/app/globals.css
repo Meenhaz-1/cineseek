@@ -19,6 +19,19 @@
   --text-title: 1rem;
   --leading-compact: 1.35;
   --leading-body: 1.55;
+  /* 4px-base spacing scale. Every new margin/padding/gap should resolve to
+     one of these instead of a hand-picked pixel value - that's what keeps
+     vertical rhythm consistent without depending on each author eyeballing
+     it per component. See CONTRIBUTING notes on spacing before adding a
+     raw px value to a margin/padding/gap declaration. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
 }
 * {
   box-sizing: border-box;
@@ -257,8 +270,9 @@ input:focus-visible {
 }
 .typeaheadGroup button {
   width: 100%;
+  min-height: 44px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
   padding: 9px 8px;
@@ -317,109 +331,70 @@ input:focus-visible {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 16px;
-  color: #777;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: var(--text-small);
 }
 .examples > span {
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 .examples button {
+  min-height: 40px;
   border: 1px solid #ffffff20;
   background: #ffffff09;
   color: #bababa;
-  padding: 7px 10px;
+  padding: 10px 14px;
   border-radius: 99px;
-  font-size: 11px;
+  font-size: var(--text-small);
   cursor: pointer;
 }
 .examples button:hover {
   border-color: #ffffff66;
   color: white;
 }
+/* A small mosaic of real posters, not one film - the hero should read as
+   "explore the catalog," matching the copy next to it, not "this is the
+   Interstellar site." One larger featured tile + two supporting tiles,
+   each a real MoviePoster at its own natural composition (no violent crop
+   to force one image into an unrelated shape). */
 .heroArt {
   position: absolute;
   right: 3vw;
   top: 112px;
   width: 39vw;
   height: 510px;
-  border-radius: 240px 240px 16px 16px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  grid-template-rows: repeat(2, 1fr);
+  gap: 14px;
+}
+.heroArtTile {
+  position: relative;
+  border-radius: 10px;
   overflow: hidden;
-  background:
-    radial-gradient(
-      circle at 48% 30%,
-      #e4fece 0 3%,
-      #aadce3 4%,
-      transparent 13%
-    ),
-    linear-gradient(163deg, transparent 43%, #0b1418 44%),
-    radial-gradient(ellipse at 50% 42%, #305868, #10222a 48%, #090d0f 70%);
-  box-shadow:
-    inset 0 0 120px #000,
-    0 30px 90px #000;
+  box-shadow: 0 20px 45px #000a;
 }
-.heroArt:before {
-  content: "";
+.heroArtTile.featured {
+  grid-row: 1 / span 2;
+}
+/* Let the grid cell dictate size instead of the card's own aspect-ratio. */
+.heroArtTile .poster {
   position: absolute;
-  width: 340px;
-  height: 340px;
-  border: 1px solid #dfffb741;
-  border-radius: 50%;
-  left: 50%;
-  top: 39%;
-  transform: translate(-50%, -50%);
-  box-shadow:
-    0 0 0 40px #b9e8de0d,
-    0 0 0 90px #b9e8de08;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
 }
-.orb {
-  position: absolute;
-  border-radius: 50%;
+/* These cells are squarer than a poster's natural proportions - bias the
+   crop toward the top so title treatments near the top of the art survive. */
+.heroArtTile .posterImage {
+  object-position: center top;
 }
-.orb1 {
-  width: 86px;
-  height: 86px;
-  background: radial-gradient(
-    circle at 30% 30%,
-    #f0b46c,
-    #522b1a 65%,
-    #090909 70%
-  );
-  right: 19%;
-  top: 17%;
-}
-.orb2 {
-  width: 18px;
-  height: 18px;
-  background: #dceace;
-  left: 25%;
-  top: 29%;
-}
-.filmTitle {
-  position: absolute;
-  left: 9%;
-  bottom: 14%;
-  font: 600 52px/0.76 var(--font-interface);
-  letter-spacing: 0.04em;
-  color: #e9eee5;
-}
-.filmTitle small {
-  display: block;
-  font: 700 8px var(--font-interface);
-  letter-spacing: 0.42em;
-  color: var(--lime);
-  margin-top: 18px;
-}
-.heroRating {
-  position: absolute;
-  right: 7%;
-  bottom: 7%;
-  font-size: 12px;
-  color: var(--amber);
-}
-.heroRating span {
-  color: #929b98;
-  margin-left: 5px;
+/* Not search results, so the rank/match badges don't apply here. */
+.heroArtTile .rank,
+.heroArtTile .match {
+  display: none;
 }
 .workspace,
 .metrics,
@@ -942,12 +917,32 @@ footer > a:last-child {
   width: min(560px, 100%);
   background: #171a1d;
   border: 1px solid #3a3e42;
-  padding: 38px;
+  border-radius: 8px;
+  padding: var(--space-7);
   box-shadow: 0 30px 100px #000;
 }
 .modal h2 {
   font: 38px var(--font-display);
-  margin: 12px 0;
+  margin: var(--space-3) 0;
+}
+/* Every direct child gets the same bottom gap, so the rhythm reads as one
+   consistent scale top to bottom instead of each block improvising its own
+   spacing (browser-default paragraph margins included). */
+.modal > * {
+  margin-top: 0;
+  margin-bottom: var(--space-5);
+}
+/* The eyebrow labels its headline directly below - keep that pairing tight,
+   same convention as the hero and section headings elsewhere. */
+.modal .sectionKicker {
+  margin-bottom: var(--space-2);
+}
+.modalCast small {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+.modal > *:last-child {
+  margin-bottom: 0;
 }
 .modal > p {
   color: #999;
@@ -955,8 +950,12 @@ footer > a:last-child {
 }
 .close {
   position: absolute;
-  right: 14px;
-  top: 12px;
+  right: 4px;
+  top: 2px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
   border: 0;
   background: transparent;
   color: #aaa;
@@ -968,15 +967,16 @@ footer > a:last-child {
   grid-template-columns: 1fr 1fr;
   gap: 1px;
   background: #333;
-  margin: 25px 0;
+  /* Margin intentionally omitted - inherits the standard space-5 rhythm
+     from ".modal > *" like every other block in the modal. */
 }
 .modal dl div {
   background: #111;
-  padding: 14px;
+  padding: var(--space-4);
 }
 .modal dt {
-  font-size: 8px;
-  color: #777;
+  font-size: var(--text-caption);
+  color: var(--muted);
   text-transform: uppercase;
 }
 .modal dd {
@@ -984,8 +984,8 @@ footer > a:last-child {
   font: 15px var(--font-display);
 }
 .modal > small {
-  color: #777;
-  font-size: 9px;
+  color: var(--muted);
+  font-size: var(--text-caption);
 }
 @media (max-width: 1000px) {
   .heroCopy {
@@ -1296,13 +1296,6 @@ footer > a:last-child {
   }
 }
 
-/* Tablet: treat the hero artwork as atmosphere, not a competing content column. */
-@media (max-width: 1000px) {
-  .heroArt .filmTitle,
-  .heroArt .heroRating {
-    display: none;
-  }
-}
 @media (min-width: 701px) and (max-width: 1000px) {
   html,
   body {
@@ -1338,10 +1331,6 @@ footer > a:last-child {
     height: 540px;
     opacity: 0.26;
     pointer-events: none;
-  }
-  .heroArt .filmTitle,
-  .heroArt .heroRating {
-    display: none;
   }
   .workspace,
   .metrics,
@@ -1430,7 +1419,8 @@ footer > a:last-child {
 .didYouMean button {
   border: 0;
   background: transparent;
-  padding: 2px;
+  padding: 8px 6px;
+  margin: -8px -6px;
   color: var(--lime);
   font-weight: 700;
   text-decoration: underline;
@@ -1462,7 +1452,8 @@ footer > a:last-child {
   gap: 5px;
   border: 0;
   background: transparent;
-  padding: 2px 0;
+  padding: 8px 4px;
+  margin: -8px -4px;
   color: #a9adaa;
   font: inherit;
   font-weight: 500;
@@ -1750,8 +1741,9 @@ footer > a:last-child {
   aspect-ratio: 2/3;
 }
 .learningFocus {
-  margin: 18px 0;
-  padding: 13px 15px;
+  /* Margin intentionally omitted where nested in .modal - inherits the
+     standard space-5 rhythm from ".modal > *". */
+  padding: var(--space-3) var(--space-4);
   border-left: 2px solid var(--lime);
   background: #11170e;
 }
@@ -1763,7 +1755,7 @@ footer > a:last-child {
   letter-spacing: 0.1em;
 }
 .learningFocus p {
-  margin: 7px 0 0;
+  margin: var(--space-2) 0 0;
   color: #cbd2c6;
   font: 11px/1.5 var(--font-interface);
 }

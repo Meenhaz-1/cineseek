@@ -23,3 +23,8 @@ frontend/.env.local
 .vercel/
 .env.local
 frontend/.vercel/
+
+# Local skill installs (npx skills add)
+/.agents/
+/.claude/
+/skills-lock.json
