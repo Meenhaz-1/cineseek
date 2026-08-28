@@ -1,6 +1,7 @@
 import type { FormEvent, RefObject } from "react";
 
-import { examples } from "../../data";
+import { examples, heroMovies } from "../../data";
+import { MoviePoster } from "../../movie-poster";
 import type {
   TypeaheadSuggestion,
   TypeaheadSuggestions,
@@ -103,16 +104,20 @@ export function SearchHero({
         </div>
       </div>
       <div className="heroArt" aria-hidden="true">
-        <div className="orb orb1" />
-        <div className="orb orb2" />
-        <div className="filmTitle">
-          INTER
-          <br />
-          STELLAR<small>BEYOND THE STARS</small>
-        </div>
-        <div className="heroRating">
-          ★ 4.0 <span>73 ratings</span>
-        </div>
+        {heroMovies.map((movie, index) => (
+          <div
+            key={movie.id}
+            className={`heroArtTile${index === 0 ? " featured" : ""}`}
+          >
+            <MoviePoster
+              movieId={movie.id}
+              title={movie.title}
+              palette={movie.palette}
+              posterPath={movie.posterPath}
+              rank={index + 1}
+            />
+          </div>
+        ))}
       </div>
     </section>
   );
