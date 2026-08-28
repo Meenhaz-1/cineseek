@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { FocusEvent, KeyboardEvent } from "react";
 
 import type {
   TypeaheadSuggestion,
@@ -109,6 +109,12 @@ export function TypeaheadCombobox({
     onInputChange(value);
   }
 
+  function handleBlur(event: FocusEvent<HTMLInputElement>) {
+    if (containerRef.current?.contains(event.relatedTarget as Node | null))
+      return;
+    setIsFocused(false);
+  }
+
   return (
     <div className="typeahead" ref={containerRef}>
       <input
@@ -117,7 +123,7 @@ export function TypeaheadCombobox({
         value={input}
         onChange={(event) => handleInputChange(event.target.value)}
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoComplete="off"
@@ -150,7 +156,7 @@ export function TypeaheadCombobox({
                       className={
                         activeIndex === currentIndex ? "active" : undefined
                       }
-                      onMouseDown={(event) => event.preventDefault()}
+                      onPointerDown={(event) => event.preventDefault()}
                       onClick={() => onSelect(suggestion)}
                     >
                       <span>{suggestion.label}</span>
