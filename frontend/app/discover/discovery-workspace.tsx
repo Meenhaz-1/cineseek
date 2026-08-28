@@ -688,7 +688,7 @@ export function DiscoveryWorkspace() {
                         {titleRetrieval.result.tokenLookup.candidatesPreview
                           .length > 0 && (
                           <div className="candidatePreview">
-                            <b>Candidate preview—not ranked</b>
+                            <b>Candidate preview: not ranked</b>
                             <div>
                               {titleRetrieval.result.tokenLookup.candidatesPreview.map(
                                 (candidate) => (
@@ -1028,7 +1028,7 @@ export function DiscoveryWorkspace() {
                           </p>
                         )}
                         <div className="trigramCandidates">
-                          <b>Highest fragment overlap—coarse retrieval only</b>
+                          <b>Highest fragment overlap: coarse retrieval only</b>
                           {titleRetrieval.result.trigramLookup.candidatesPreview
                             .length ? (
                             <div>

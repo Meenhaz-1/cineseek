@@ -2,7 +2,7 @@ import { EntityExplorer } from "./entity-explorer";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Entity browser — CineSeek",
+  title: "Entity browser · CineSeek",
   description:
     "Browse the canonical people, genres, tags, and movie relationships used by CineSeek.",
 };

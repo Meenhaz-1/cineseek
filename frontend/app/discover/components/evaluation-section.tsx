@@ -51,7 +51,6 @@ export function EvaluationSection({
       >
         <div className="parserTestHeader">
           <div>
-            <span className="sectionKicker">Executable specification</span>
             <h2 id="parser-test-title">Query parser verification</h2>
             <p>
               Runs every workbook case marked Supported against the same

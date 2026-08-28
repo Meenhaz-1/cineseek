@@ -3,7 +3,7 @@ import { BenchmarkEditor } from "./benchmark-editor";
 import { GenreReview } from "./genre-review";
 
 export const metadata = {
-  title: "Benchmark editor — CineSeek",
+  title: "Benchmark editor · CineSeek",
   description:
     "Edit CineSeek evaluation queries and graded relevance judgments.",
 };

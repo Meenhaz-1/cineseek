@@ -2,7 +2,6 @@ export function DatasetSection() {
   return (
     <section className="dataset" id="dataset">
       <div>
-        <span className="sectionKicker">Built in the open</span>
         <h2>
           From raw ratings to
           <br />

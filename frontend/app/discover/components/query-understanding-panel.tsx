@@ -209,8 +209,7 @@ export function QueryUnderstandingPanel({
             <label>Words checked in titles</label>
             <TechnicalLabel>title retrieval query</TechnicalLabel>
             <code>
-              {analysis.retrievalQuery ||
-                "None — title matching was not needed"}
+              {analysis.retrievalQuery || "None: title matching was not needed"}
             </code>
             <small className="fieldReason">
               {analysis.retrievalQuery
