@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "declaration-property-value-disallowed-list": [
+      {
+        "/^(margin|padding|gap|row-gap|column-gap)/": [
+          "/\\b(?!1px\\b)[0-9]+px\\b/"
+        ]
+      },
+      {
+        "severity": "warning",
+        "message": "Use a --space-* token (see :root in globals.css) instead of a raw px value for margin/padding/gap, so spacing stays sourced from the shared scale instead of hand-picked per component. (1px is exempt - that's almost always a hairline border/divider, not spacing rhythm.)"
+      }
+    ]
+  }
+}

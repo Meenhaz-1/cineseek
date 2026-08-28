@@ -12,6 +12,7 @@
     "vercel-build": "node scripts/fetch-runtime-data.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:css": "stylelint \"app/**/*.css\"",
     "format": "prettier --write \"app/**/*.{ts,tsx,css}\" \"lib/**/*.{mjs,mts}\" \"scripts/**/*.mjs\" \"*.{json,md,mjs,ts}\"",
     "format:check": "prettier --check \"app/**/*.{ts,tsx,css}\" \"lib/**/*.{mjs,mts}\" \"scripts/**/*.mjs\" \"*.{json,md,mjs,ts}\"",
     "scan:secrets": "node scripts/scan-secrets.mjs",
@@ -51,7 +52,9 @@
     "eslint": "^9.34.0",
     "eslint-config-next": "16.3.0",
     "exceljs": "^4.4.0",
+    "playwright": "^1.62.1",
     "prettier": "^3.9.6",
+    "stylelint": "^17.14.1",
     "typescript": "^5.9.2"
   }
 }
