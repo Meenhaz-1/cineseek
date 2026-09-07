@@ -20,8 +20,6 @@ place to explore.
 ![MovieLens](https://img.shields.io/badge/data-MovieLens-0F6CBD)
 [![License: MIT](https://img.shields.io/badge/license-MIT-D9FF62.svg)](LICENSE)
 
-![Uploading Screenshot 2026-09-07 at 10.48.58 AM.png…]()
-
 
 ## What you can explore
 
