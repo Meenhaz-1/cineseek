@@ -1,45 +1,133 @@
 # CineSeek
 
-**Explainable movie discovery, from query understanding to relevance evaluation.**
+**Understand how search works. Explore autocorrect. Tune the ranking yourself.**
+
+CineSeek is an interactive playground for anyone curious about what happens
+between typing a query and seeing results. Search **9,742 MovieLens titles**,
+inspect how your words are interpreted, and change ranking weights to see why
+some movies rise above others.
+
+**The product idea is simple: make search easier to understand by letting people
+experiment with its moving parts.** A familiar movie catalogue gives abstract
+concepts—like spelling similarity, phrase matching, and relevance—a concrete
+place to explore.
+
+[What you can explore](#what-you-can-explore) · [Try an experiment](#try-an-experiment) ·
+[Product decisions](#product-decisions-and-tradeoffs) · [Run locally](#five-minute-local-setup)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![MovieLens](https://img.shields.io/badge/data-MovieLens-0F6CBD)
 [![License: MIT](https://img.shields.io/badge/license-MIT-D9FF62.svg)](LICENSE)
 
-CineSeek is a movie-search product and relevance workbench built over 9,742
-MovieLens titles. It makes the normally hidden parts of search—correction,
-intent, routing, candidate generation, scoring, and judgments—inspectable and
-editable.
+## What you can explore
 
-## Why this exists
+| Question | What CineSeek makes visible |
+| --- | --- |
+| **How does search understand my query?** | Follow how words become title matches, genres, entities, filters, and sorting instructions. |
+| **How does autocorrect work?** | Inspect spelling corrections, the entity they apply to, and the planner's confidence. Explore how context affects interpretation. |
+| **Why did this movie rank higher?** | See the contribution of matching words, word order, phrases, proximity, spelling similarity, and rating signals. |
+| **What happens if I change the weights?** | Adjust ranking controls and compare the resulting order and score breakdowns. |
+| **Did my change make search better?** | Explore benchmark metrics and, in local mode, review relevance judgments across different queries. |
 
-A plausible search result is not necessarily a good answer. A query such as
-`romantic comedy`, `tom cuise`, or `1990s crime movies with at least 100 ratings`
-requires different interpretation, retrieval, and ranking choices. CineSeek
-turns those choices into a product surface: you can see what the system
-understood, inspect why a result scored, alter weights, and evaluate the impact
-against a shared benchmark.
+The playground is for learners, developers, product managers, and anyone who
+has wondered why a search engine returned a particular result. You can start
+with a query and a few controls, then go deeper into the planner, scoring, and
+evaluation as your curiosity grows.
 
-The goal is not to imitate a streaming catalogue. It is to show how a search
-system can be understandable to product teams while remaining measurable for
-relevance engineers.
+## Try an experiment
 
-## Product capabilities
+After [starting CineSeek locally](#five-minute-local-setup), follow a simple
+learning loop: **search → inspect → change a weight → compare**.
 
-- **Unified query planner** — one server-side, typed plan handles normalization,
-  contextual spelling correction, intent, entities, filters, routing, and sort.
-- **Entity-aware retrieval** — titles, actors, directors, genres, tags, and
-  optional overviews remain distinguishable evidence rather than one opaque
-  text field.
-- **Structured filters** — year, minimum rating, rating count, genre, and sort
-  constraints are separated from title scoring.
-- **Explainable ranking** — inspect token coverage, order, phrase, proximity,
-  trigram, edit-distance, field, rating, and genre-focus contributions.
-- **Evaluation workbench** — edit queries and qrels, run the production planner,
-  and compare MRR, nDCG@10, recall, and latency.
-- **Human relevance review** — build frozen pools, grade candidates on a 0–3
-  scale, preserve unjudged states, and flag disagreements for adjudication.
+1. **Explore query understanding.** Compare `horror movies` with
+   `title contains horror`. Inspect how the same word can become a genre
+   constraint or part of a title search.
+2. **Investigate a typo.** Try a misspelled movie title and inspect the query
+   understanding panel. Check whether a correction was applied and examine the
+   explanation. With optional TMDB enrichment, try a person query such as
+   `tom cuise` too.
+3. **Change what matters in ranking.** Search for a title with several words.
+   Increase the phrase bonus, then try changing token coverage or edit
+   similarity. Compare the result order and individual score contributions.
+4. **Explore genre ranking.** Search `comedy` and experiment with genre
+   centrality, rating quality, and rating-count evidence. Inspect how each
+   signal contributes to the results.
+
+Changing a weight may leave the order unchanged for some queries. The score
+breakdown helps explain when a signal matters and when other signals dominate.
+
+## Why the product is designed this way
+
+Search combines several decisions that are usually hidden behind a single
+input box. CineSeek turns those decisions into things people can inspect and
+control. The intended learning outcome is to help someone explain **how a query
+was understood, why a result appeared, and what changed after an adjustment**.
+
+Three priorities shape the experience:
+
+- **Make concepts tangible.** Use movies and recognizable queries to connect
+  search mechanics to results people can reason about.
+- **Make experimentation explainable.** Put ranking controls alongside score
+  evidence so people can connect an adjustment to its effect.
+- **Support deeper investigation.** Use the same planner and retrieval pipeline
+  for interactive search and benchmarks, letting a single-query experiment
+  lead into broader evaluation.
+
+## Product decisions and tradeoffs
+
+| Decision | Product rationale | Tradeoff |
+| --- | --- | --- |
+| **Start with deterministic query planning.** | Let people follow each interpretation step and reproduce the same experiment. | Rules have limited language coverage; an LLM planner remains a planned comparison. |
+| **Keep intent and constraints distinct.** | Treat `horror movies` as genre discovery, `title contains horror` as title search, and year or rating requirements as filters. | Contextual routing needs explicit cases and ongoing evaluation. |
+| **Preserve separate evidence for each field.** | Distinguish title, person, genre, tag, and overview matches so people can understand why a movie appears. | Broader discovery depends on metadata coverage and optional enrichment. |
+| **Use ratings as supporting evidence.** | Require at least five ratings before an average can influence ranking; apply Bayesian adjustment and keep rating count separate. | Popularity and rating signals cannot substitute for human relevance judgments. |
+| **Make human review part of the product.** | Preserve unjudged candidates and flag disagreements for adjudication. | Reliable evaluation requires reviewer effort; generated labels remain provisional. |
+| **Keep hosted access read-only.** | Share search, diagnostics, and benchmark evidence through a bounded public deployment. | Collaborative editing requires authentication and transactional persistence. |
+
+## Measuring search quality
+
+The committed benchmark provides an initial baseline across **82 queries**.
+These are warm local runs with **generated, provisional relevance judgments**;
+they establish a regression baseline, not validated user impact.
+
+| Question | Measure | Committed result |
+| --- | --- | ---: |
+| Do relevant candidates enter the result pool? | Candidate recall | 81.10% |
+| How early does the first relevant result appear? | MRR | 0.3500 |
+| How well are the top results ordered? | nDCG@10 | 0.3525 |
+| How responsive is the search pipeline? | Warm p95 end-to-end latency | 71.03 ms |
+| Did every benchmark query produce a run? | Missing query runs | 0 |
+
+Use these metrics to explore a second question after changing the weights:
+**did the results improve across different searches, or just the one you tried?**
+The labels are incomplete, so reliable comparisons require human review.
+These figures measure the search pipeline; they do not establish how much
+people learn from using CineSeek.
+
+Source: [committed benchmark summary](frontend/data/benchmark-summary.json).
+See the [review protocol](benchmark/README.md) for how provisional labels should
+be validated.
+
+## Priorities and current boundaries
+
+Future work can extend what people can explore while keeping comparisons
+meaningful. These are proposed directions, not shipped capabilities.
+
+1. **Establish a reviewed relevance baseline.** Complete human grading and
+   adjudication, then publish a separate reviewed split. The existing 82-query
+   set remains provisional; genre review is in progress.
+2. **Compare approaches against that baseline.** Evaluate deterministic versus
+   LLM query planning and explore semantic candidate retrieval. Current
+   retrieval is lexical, field-aware, and metadata-aware; semantic and hybrid
+   vector retrieval are not yet implemented.
+3. **Enable shared operation.** Add production authentication, role-based
+   authorization, and transactional persistence before supporting concurrent
+   editing. Write-capable review and parser-test routes are currently local-only.
+
+Actor, director, overview, and poster coverage depends on an optional TMDB
+enrichment run. Filesystem persistence supports local workflows; it does not
+provide concurrent, distributed production storage.
 
 ## Architecture
 
@@ -60,51 +148,10 @@ flowchart LR
     J --> G[MRR · nDCG@10 · Recall · Latency]
 ```
 
-The webpage and benchmark call the same `QueryPlanner` and retrieval pipeline.
-Retrieval consumes a validated `QueryPlan`; it does not reinterpret raw
-language. That boundary also supports a future LLM planner comparison without
-changing candidate generation or ranking.
-
-## Product decisions and tradeoffs
-
-**Deterministic before generative.** Rules and scores are traceable, fast, and
-repeatable. An LLM planner is a planned comparison implementation, not a hidden
-replacement for the current logic.
-
-**Genre and title are contextual.** `horror movies` routes Horror as a genre;
-`title contains horror` keeps the same word in the title route; `Horror of
-Dracula` can retain title evidence plus a lower-priority genre fallback.
-
-**Metadata constraints are not title words.** A year range or rating-count
-constraint filters candidates instead of improving lexical similarity.
-
-**Rating is evidence, not truth.** A movie needs at least five ratings before
-its average rating can influence ranking. Eligible averages use Bayesian
-adjustment, while rating count remains separate evidence. Human grades remain
-authoritative.
-
-**The benchmark is provisional.** Generated qrels are useful regression guards,
-not complete ground truth. The review workflow exists precisely because a
-single expected title can misrepresent discovery quality.
-
-## Measured evidence
-
-The current committed summary is generated from the 80-query provisional split
-using warm local runs over MovieLens Latest Small:
-
-| Metric | Current result |
-| --- | ---: |
-| Candidate recall | 0.8063 |
-| MRR | 0.3151 |
-| nDCG@10 | 0.3187 |
-| Warm p95 end-to-end latency | 101.03 ms |
-| Missing query runs | 0 |
-
-These values are evidence of the current implementation, not a claim of
-production search quality. The judgments are incomplete and some categories
-have sparse labels. See [`benchmark/README.md`](benchmark/README.md) for the
-review protocol and [`frontend/data/benchmark-summary.json`](frontend/data/benchmark-summary.json)
-for the UI source artifact.
+The webpage and benchmark call the same `QueryPlanner`. Retrieval consumes a
+validated `QueryPlan` without reinterpreting raw language. This boundary makes
+it possible to compare a future LLM planner while holding candidate generation
+and ranking constant.
 
 ## Five-minute local setup
 
@@ -168,7 +215,7 @@ Run these from `frontend/` unless noted otherwise.
 | `npm run test:title-index` | Run planner, retrieval, ranking, and benchmark unit tests |
 | `npm run test:tmdb` | Run enrichment and poster-path tests using source-owned fixtures |
 | `npm run workbook:parser-cases:verify` | Verify parser workbook cases against the production planner |
-| `npm run benchmark:title` | Run the 80-query production pipeline benchmark |
+| `npm run benchmark:title` | Run the 82-query production pipeline benchmark |
 | `npm run benchmark:actions-summary -- <report.json>` | Render an evaluator report as a GitHub Actions summary |
 | `npm run benchmark:generic-genre` | Build the focused, unjudged `comedy` ranking pool and evidence report |
 | `npm run benchmark:summary` | Regenerate the UI benchmark summary from an evaluator report |
@@ -206,23 +253,6 @@ tests/                  Python tests
 Generated datasets, caches, reports, registries, private reviews, and Next.js
 build output are ignored. A clean checkout recreates them through the bootstrap
 command.
-
-## Current limitations and roadmap
-
-- Complete human-reviewed judgments are available only through an in-progress
-  genre review workflow; the 82-query qrels remain provisional.
-- Retrieval is primarily lexical, field-aware, and metadata-aware. Semantic or
-  hybrid vector retrieval has not yet been implemented.
-- Optional actor, director, overview, and poster coverage depends on the user's
-  TMDB enrichment run.
-- Write-capable benchmark and parser-test routes are local-only. Production
-  authentication and role-based authorization are planned separately.
-- Filesystem persistence is suitable for a local build, not concurrent or
-  distributed production operation.
-
-Next steps are reviewed relevance splits, deterministic-versus-LLM query-plan
-evaluation, semantic candidate retrieval, production authentication, and
-transactional persistence.
 
 ## Data and licensing
 
