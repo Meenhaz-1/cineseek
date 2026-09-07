@@ -7,6 +7,8 @@ between typing a query and seeing results. Search **9,742 MovieLens titles**,
 inspect how your words are interpreted, and change ranking weights to see why
 some movies rise above others.
 
+**[Try the live demo →](https://cineseek-psi.vercel.app/)**
+
 **The product idea is simple: make search easier to understand by letting people
 experiment with its moving parts.** A familiar movie catalogue gives abstract
 concepts—like spelling similarity, phrase matching, and relevance—a concrete
@@ -20,8 +22,9 @@ place to explore.
 ![MovieLens](https://img.shields.io/badge/data-MovieLens-0F6CBD)
 [![License: MIT](https://img.shields.io/badge/license-MIT-D9FF62.svg)](LICENSE)
 
-![Uploading Screenshot 2026-09-07 at 10.48.58 AM.png…]()
+[![CineSeek webpage showing the movie search box, suggested queries, poster mosaic, and ranked results with score badges](docs/images/cineseek-search-playground.png)](https://cineseek-psi.vercel.app/)
 
+*The working CineSeek discovery page, with suggested searches and scored movie results.*
 
 ## What you can explore
 
@@ -40,7 +43,8 @@ evaluation as your curiosity grows.
 
 ## Try an experiment
 
-After [starting CineSeek locally](#five-minute-local-setup), follow a simple
+Open the [live demo](https://cineseek-psi.vercel.app/) or
+[start CineSeek locally](#five-minute-local-setup), then follow a simple
 learning loop: **search → inspect → change a weight → compare**.
 
 1. **Explore query understanding.** Compare `horror movies` with
