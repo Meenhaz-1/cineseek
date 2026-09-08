@@ -20,8 +20,8 @@
     "data:release:check": "node --env-file-if-exists=.env.local scripts/publish-data-release.mjs --dry-run",
     "data:fetch": "node scripts/fetch-runtime-data.mjs",
     "test:tmdb": "node --test lib/tmdb-images.test.mjs scripts/tmdb-enrichment-lib.test.mjs scripts/enriched-corpus-lib.test.mjs scripts/entity-registry-lib.test.mjs",
-    "test:title-index": "node --test lib/deployment-mode.test.mjs lib/exact-title-index.test.mjs lib/metadata-query.test.mjs lib/benchmark-editor.test.mjs lib/genre-benchmark.test.mjs lib/data-release.test.mjs lib/title-token-index.test.mjs lib/field-aware-index.test.mjs lib/person-name-suggestion.test.mjs lib/typeahead-suggestions.test.mjs lib/character-trigram-index.test.mjs lib/edit-distance.test.mjs lib/token-coverage.test.mjs lib/ordered-token-proximity.test.mjs lib/combined-title-ranker.test.mjs lib/title-search-pipeline.test.mjs lib/query-planner.test.mjs",
-    "test:title-index:ci": "node --test --test-reporter=junit --test-reporter-destination=test-results/title-index.xml lib/deployment-mode.test.mjs lib/exact-title-index.test.mjs lib/metadata-query.test.mjs lib/benchmark-editor.test.mjs lib/genre-benchmark.test.mjs lib/data-release.test.mjs lib/title-token-index.test.mjs lib/field-aware-index.test.mjs lib/person-name-suggestion.test.mjs lib/typeahead-suggestions.test.mjs lib/character-trigram-index.test.mjs lib/edit-distance.test.mjs lib/token-coverage.test.mjs lib/ordered-token-proximity.test.mjs lib/combined-title-ranker.test.mjs lib/title-search-pipeline.test.mjs lib/query-planner.test.mjs",
+    "test:title-index": "node --test lib/deployment-mode.test.mjs lib/exact-title-index.test.mjs lib/metadata-query.test.mjs lib/benchmark-editor.test.mjs lib/genre-benchmark.test.mjs lib/data-release.test.mjs lib/title-token-index.test.mjs lib/field-aware-index.test.mjs lib/person-name-suggestion.test.mjs lib/typeahead-suggestions.test.mjs lib/character-trigram-index.test.mjs lib/edit-distance.test.mjs lib/token-coverage.test.mjs lib/ordered-token-proximity.test.mjs lib/combined-title-ranker.test.mjs lib/title-search-pipeline.test.mjs lib/query-planner.test.mjs lib/hindi-search/hindi-search.test.mjs",
+    "test:title-index:ci": "node --test --test-reporter=junit --test-reporter-destination=test-results/title-index.xml lib/deployment-mode.test.mjs lib/exact-title-index.test.mjs lib/metadata-query.test.mjs lib/benchmark-editor.test.mjs lib/genre-benchmark.test.mjs lib/data-release.test.mjs lib/title-token-index.test.mjs lib/field-aware-index.test.mjs lib/person-name-suggestion.test.mjs lib/typeahead-suggestions.test.mjs lib/character-trigram-index.test.mjs lib/edit-distance.test.mjs lib/token-coverage.test.mjs lib/ordered-token-proximity.test.mjs lib/combined-title-ranker.test.mjs lib/title-search-pipeline.test.mjs lib/query-planner.test.mjs lib/hindi-search/hindi-search.test.mjs",
     "test:tmdb:ci": "node --test --test-reporter=junit --test-reporter-destination=test-results/tmdb.xml lib/tmdb-images.test.mjs scripts/tmdb-enrichment-lib.test.mjs scripts/enriched-corpus-lib.test.mjs scripts/entity-registry-lib.test.mjs",
     "benchmark:title": "node scripts/run-title-benchmark.mjs",
     "benchmark:actions-summary": "node scripts/write-evaluation-summary.mjs",
@@ -35,7 +35,11 @@
     "build:teaching-tmdb-cache": "node scripts/build-teaching-tmdb-cache.mjs",
     "build:entities": "node scripts/build-entity-registry.mjs",
     "workbook:parser-cases": "node scripts/build-query-parser-workbook.mjs",
-    "workbook:parser-cases:verify": "node scripts/verify-query-parser-workbook.mjs"
+    "workbook:parser-cases:verify": "node scripts/verify-query-parser-workbook.mjs",
+    "test:hindi": "node --test lib/hindi-search/hindi-search.test.mjs",
+    "benchmark:hindi": "node scripts/benchmark-hindi-search.mjs",
+    "benchmark:hindi:live": "node --env-file=.env.local scripts/benchmark-hindi-search.mjs --live",
+    "enrich:hindi": "node --env-file=.env.local scripts/enrich-hindi-aliases.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
