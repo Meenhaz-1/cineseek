@@ -152,8 +152,14 @@ node scripts/benchmark-hindi-search.mjs --output ../outputs/hindi-search-evaluat
 ```
 
 `--limit N` bounds the selected cases. `--concurrency N` accepts 1-4 (live default:
-2). Cases run once with a fresh process cache; targeted reruns do not replace a
-complete suite run. Record both baseline and final reports when tuning prompts.
+2). `--reps N` (1-10; live default 3, fixture default 1) repeats every case, each
+attempt with a fresh interpretation cache so repeats reach the model. Reports add
+a case-level pass rate with a 95% interval and list flaky cases (passed in some
+reps only). HTTP/network failures after `--retries` (default 3, jittered backoff
+on 429/5xx) and served-model mismatches are listed as errors and excluded from
+scores; five-second timeouts stay graded as failures but are counted separately.
+Targeted reruns do not replace a complete suite run. Record both baseline and
+final reports when tuning prompts.
 
 Optional current per-million-token prices can be supplied via
 `CINESEEK_MODEL_INPUT_USD_PER_MILLION`, `CINESEEK_MODEL_OUTPUT_USD_PER_MILLION`,
@@ -321,3 +327,126 @@ tests passed, including zero-call assertions, category vocabulary coverage,
 constraints, title precedence, and local AND/OR retrieval. Fixture results
 verify the pipeline, not new model accuracy. Report:
 `outputs/hindi-search-evaluation/local-genres/report.md`.
+
+## LLM relevance judge — 2026-09-30
+
+The 38-case suite checks structured intent against exact expected answers, so it
+cannot score queries that have no answer key. `scripts/judge-hindi-search.mjs`
+adds an LLM judge for those: it grades each of the top 10 results 0-3 against
+the user's full query, including requirements the search does not support
+(film language, plot, exclusions), so the score reflects what the user sees.
+
+| Grade | Meaning |
+| --- | --- |
+| 3 | The named film, or it meets every stated requirement |
+| 2 | Fits the main intent but misses one secondary requirement |
+| 1 | Related (same person or genre) but breaks an explicit requirement |
+| 0 | Unrelated |
+
+A well-rated matching film (3.5 of 5 or higher) gets 3 for "best" requests on
+its own merits; films are never compared with each other. Sort words never
+lower a grade, so **judged metrics measure relevance, not sort order** — the
+fixture suite's `sort`/`order` checks cover ordering. For "similar to" requests
+(`3 idiots jaisi comedy`) the named film itself scores at most 1. Film order is
+shuffled deterministically before judging, and the judge uses structured outputs.
+
+Empty results use a separate check: the judge proposes up to eight films that
+would satisfy the query, with the person the query names, and code accepts the
+empty result only if none of them exists in the catalogue by title, year (±1)
+and credited person. That person check stops title collisions such as Salman
+Khan's *Wanted* matching the 2008 *Wanted*.
+
+From `frontend/`:
+
+```bash
+node --env-file=.env.local scripts/judge-hindi-search.mjs --set calibration --reps 2
+node --env-file=.env.local scripts/judge-hindi-search.mjs --set real --reps 2
+node --env-file=.env.local scripts/judge-hindi-search.mjs --set real --replay ../outputs/hindi-search-judge/<run>/rows.jsonl --kind empty
+node scripts/judge-hindi-search.mjs --dry-run
+```
+
+- `--set calibration` judges the synthetic fixtures (catalogue metadata only)
+  and reports agreement with their expected IDs: grade 2 or higher counts as
+  relevant. Cases with unsupported constraints are reported separately, because
+  the fixtures follow supported semantics while the judge grades the full query.
+- `--set real` sends the 24 approved queries in
+  `lib/hindi-search/judge-queries.mjs` (8 English, 8 Hinglish, 8 Devanagari or
+  mixed) through `submittedHindiSearch`, the page's own entry point, on the real
+  corpus. The judge may also use its own film knowledge here.
+- `--replay` re-judges saved results without searching again, which matters
+  because the planner's output varies between runs.
+- `--judge-model` defaults to `gpt-5.4-mini-2026-03-17` (pinned snapshot).
+  `--case`, `--limit`, `--kind grade|empty`, `--reps`, `--concurrency`,
+  `--retries` and `--timeout-s` (default 60) work as in the benchmark.
+
+Metrics per real query: judged nDCG@10, precision@5 (share of the top five
+graded 2+), top-1 relevant, and zero-relevant (nothing graded 2+), each with a
+95% interval across queries, plus a correct-empty rate. Judged nDCG uses only
+returned films as the ideal ranking, so relevant films that were never retrieved
+are invisible to it; read it with precision@5. Reports also show judge grade
+instability across reps. Set `CINESEEK_JUDGE_INPUT_USD_PER_MILLION`,
+`CINESEEK_JUDGE_OUTPUT_USD_PER_MILLION` and
+`CINESEEK_JUDGE_CACHED_INPUT_USD_PER_MILLION` to price judge usage.
+
+### Results
+
+Calibration, prompt `judge-9`, two reps:
+
+| Check | Result |
+| --- | --- |
+| Film grades vs expected IDs | 98.4% agreement (95% CI 95-100%) |
+| Relevant films graded 2+ | 97.2% |
+| Irrelevant films graded 1 or lower | 99.2% |
+| Empty-result probes, supported queries | 94.4% |
+| Grade changes between reps | 5.9% of films |
+
+The judge prompt was revised against these same calibration cases, so this is
+**not held-out accuracy**. Remaining disagreements are mostly the query `Horror`,
+which the fixtures treat as the film titled *Horror* (a comedy) while the judge
+reads it as a genre request; both readings are defensible.
+
+Real queries, `gpt-5.4-nano` planner, two reps (48 searches, one judge error):
+
+| Metric | Result |
+| --- | --- |
+| Judged nDCG@10 | 0.957 (95% CI 0.91-1.00) |
+| Precision@5 | 93% |
+| Top-1 relevant | 92.5% |
+| Zero-relevant queries | 0% |
+
+| Input style | nDCG@10 | P@5 |
+| --- | --- | --- |
+| Devanagari | 1.00 | 100% |
+| Hinglish | 0.97 | 95% |
+| English | 0.94 | 86% |
+
+**The planner is not consistent between runs.** `nolan ki sabse achhi film` and
+`tom hanks aur spielberg dono wali movies` returned correct films in one rep and
+were blocked in the other ("Person not found: nolan" / "spielberg");
+`irfan khan ki drama films` returned mixed results, then "Ambiguous person";
+`a feel-good animated movie for kids` returned results, then nothing. Precision@5
+also moved between reps of the same English query (`spielberg war films` 40% vs
+80%, `sci-fi thrillers after 2010 with at least 4 stars` 60% vs 100%). Single
+live runs cannot show this; use `--reps`.
+
+### Limitations
+
+- **The empty-result check is not reliable on the real corpus.** On the 12
+  saved empties it was right about 7 times: it correctly accepted
+  `salman khan action movies` (not in MovieLens) and `दिल से` (*Dil Se* is not in
+  the corpus), and flagged the blocked Nolan, Hanks + Spielberg, Irrfan Khan and
+  kids' animation searches. It missed *Dil To Pagal Hai* for Hindi-language
+  romance, once proposed no Nolan films, and treated *Pulp Fiction* as "not too
+  violent". Treat the real correct-empty rate as indicative only; an empty result
+  for a query that returns films in another rep is a planner failure.
+- In real mode the judge changed grades between reps for 16.8% of films, versus
+  5.9% on metadata-only calibration. Compare variants with two or more reps and
+  do not read small differences as improvements.
+- The 24 real queries were drafted from the catalogue and approved, not sampled
+  from production traffic. The judge (`gpt-5.4-mini`) is in the same model family
+  as the planner (`gpt-5.4-nano`), which can favour its interpretations.
+
+Reports are written under the ignored `outputs/hindi-search-judge/` directory
+(`report.md`, `report.json`, `rows.jsonl`, `errors.jsonl`): the final calibration
+is `calibration-v5` (film grades) plus `calibration-empty-v9`, and the real run is
+`real-v6` with its empty results re-judged in `replay-empty-v9`.
