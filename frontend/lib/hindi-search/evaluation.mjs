@@ -87,6 +87,37 @@ const average = (rows, select) => {
     ? values.reduce((sum, n) => sum + Number(n), 0) / values.length
     : null;
 };
+// Reps of one case are correlated, so the interval is over per-case pass fractions.
+function caseLevel(rows) {
+  const byCase = new Map();
+  for (const row of rows)
+    byCase.set(row.id, [...(byCase.get(row.id) ?? []), row.passed]);
+  const fractions = [...byCase.values()].map(
+    (runs) => runs.filter(Boolean).length / runs.length,
+  );
+  const n = fractions.length;
+  const mean = n ? fractions.reduce((a, b) => a + b, 0) / n : null;
+  const sd =
+    n > 1
+      ? Math.sqrt(
+          fractions.reduce((sum, f) => sum + (f - mean) ** 2, 0) / (n - 1),
+        )
+      : 0;
+  const half = n > 1 ? (1.96 * sd) / Math.sqrt(n) : null;
+  return {
+    caseCount: n,
+    casePassRate: mean,
+    casePassRateCI95:
+      half === null
+        ? null
+        : [Math.max(0, mean - half), Math.min(1, mean + half)],
+    flakyCases: [...byCase]
+      .filter(([, runs]) => runs.some(Boolean) && !runs.every(Boolean))
+      .map(
+        ([id, runs]) => `${id} (${runs.filter(Boolean).length}/${runs.length})`,
+      ),
+  };
+}
 export function summarizeCases(rows) {
   const times = rows.map((r) => r.endToEndMs).sort((a, b) => a - b);
   const modelRows = rows.filter((r) => !r.fastPath);
@@ -94,6 +125,8 @@ export function summarizeCases(rows) {
     count: rows.length,
     passed: rows.filter((r) => r.passed).length,
     passRate: average(rows, (r) => r.passed),
+    ...caseLevel(rows),
+    timeouts: rows.filter((r) => r.failureClass === "timeout").length,
     modelRequiredCount: modelRows.length,
     modelResponseRate: average(modelRows, (r) => r.mode === "model"),
     modelCasePassRate: average(modelRows, (r) => r.passed),
@@ -148,7 +181,7 @@ export function renderEvaluation(report) {
   const cell = (value) =>
     String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
   return (
-    `# Hindi / Hinglish search evaluation\n\n${report.note}\n\nMode: **${report.mode}** · Model: **${report.model}** · Effort: **${report.reasoning ?? "model default"}** · Prompt: **${report.promptVersion}**\n\nPassed **${report.summary.passed}/${report.summary.count}** cases. Model response rate: **${percent(report.summary.modelResponseRate)}**. P95: **${report.summary.p95Ms?.toFixed(0)} ms**.\n\n` +
+    `# Hindi / Hinglish search evaluation\n\n${report.note}\n\nMode: **${report.mode}** · Model: **${report.model}** · Effort: **${report.reasoning ?? "model default"}** · Prompt: **${report.promptVersion}**\n\nPassed **${report.summary.passed}/${report.summary.count}** attempts (${report.summary.reps ?? 1} rep(s) per case). Case pass rate: **${percent(report.summary.casePassRate)}**${report.summary.casePassRateCI95 ? ` (95% CI ${percent(report.summary.casePassRateCI95[0])}-${percent(report.summary.casePassRateCI95[1])})` : ""}. Model response rate: **${percent(report.summary.modelResponseRate)}**. P95: **${report.summary.p95Ms?.toFixed(0)} ms**. Timeouts: **${report.summary.timeouts}**. Errors excluded from scores: **${report.summary.errorCount ?? 0}** (retries: ${report.summary.retryCount ?? 0}).\n\nFlaky cases: ${report.summary.flakyCases.length ? report.summary.flakyCases.map(cell).join(", ") : "none"}.\n\n` +
     `| Script | Passed | Model response rate | Constraint accuracy |\n| --- | --- | --- | --- |\n` +
     Object.entries(report.byScript)
       .map(
@@ -156,11 +189,11 @@ export function renderEvaluation(report) {
           `| ${script} | ${s.passed}/${s.count} | ${percent(s.modelResponseRate)} | ${percent(s.constraintAccuracy)} |`,
       )
       .join("\n") +
-    `\n\n## Cases\n\n| ID | Query | Outcome | Mode | Failed checks |\n| --- | --- | --- | --- | --- |\n` +
+    `\n\n## Cases\n\n| ID | Rep | Query | Outcome | Mode | Failed checks |\n| --- | --- | --- | --- | --- | --- |\n` +
     report.rows
       .map(
         (row) =>
-          `| ${cell(row.id)} | ${cell(row.query)} | ${row.passed ? "PASS" : "FAIL"} | ${cell(row.mode + (row.fallbackReason ? ` (${row.fallbackReason})` : ""))} | ${row.failedChecks.join(", ")} |`,
+          `| ${cell(row.id)} | ${row.rep ?? 0} | ${cell(row.query)} | ${row.passed ? "PASS" : `FAIL (${row.failureClass ?? "wrong_answer"})`} | ${cell(row.mode + (row.fallbackReason ? ` (${row.fallbackReason})` : ""))} | ${row.failedChecks.join(", ")} |`,
       )
       .join("\n") +
     `\n\n## Failures\n\n` +
@@ -168,9 +201,16 @@ export function renderEvaluation(report) {
       .filter((r) => !r.passed)
       .map(
         (row) =>
-          `### ${row.id}\n\n${row.query}\n\nExpected:\n\n\`\`\`json\n${JSON.stringify(row.expected, null, 2)}\n\`\`\`\n\nActual:\n\n\`\`\`json\n${JSON.stringify(row.actual, null, 2)}\n\`\`\`\n`,
+          `### ${row.id} (rep ${row.rep ?? 0})\n\n${row.query}\n\nExpected:\n\n\`\`\`json\n${JSON.stringify(row.expected, null, 2)}\n\`\`\`\n\nActual:\n\n\`\`\`json\n${JSON.stringify(row.actual, null, 2)}\n\`\`\`\n`,
       )
       .join("\n") || "None.\n") +
-    `\nToken usage: ${report.summary.usage.inputTokens} input, ${report.summary.usage.outputTokens} output. ${report.summary.usage.unreportedCalls} calls have unreported usage; timeouts can still incur provider charges. Estimated cost: ${report.estimatedCostUSD === null ? "not available" : `$${report.estimatedCostUSD.toFixed(6)}`} (reported usage only).\n`
+    `\n## Errors (excluded from scores)\n\n` +
+    ((report.errors ?? [])
+      .map(
+        (e) =>
+          `- ${cell(e.id)} rep ${e.rep}: ${e.failureClass} after ${e.retries} retries`,
+      )
+      .join("\n") || "None.") +
+    `\n\nToken usage: ${report.summary.usage.inputTokens} input, ${report.summary.usage.outputTokens} output. ${report.summary.usage.unreportedCalls} calls have unreported usage; timeouts can still incur provider charges. Estimated cost: ${report.estimatedCostUSD === null ? "not available" : `$${report.estimatedCostUSD.toFixed(6)}`} (reported usage only).\n`
   );
 }
